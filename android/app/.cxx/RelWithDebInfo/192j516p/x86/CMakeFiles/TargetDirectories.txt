@@ -1,0 +1,2 @@
+D:/ai_apps/loan_app_flutter/android/app/.cxx/RelWithDebInfo/192j516p/x86/CMakeFiles/edit_cache.dir
+D:/ai_apps/loan_app_flutter/android/app/.cxx/RelWithDebInfo/192j516p/x86/CMakeFiles/rebuild_cache.dir

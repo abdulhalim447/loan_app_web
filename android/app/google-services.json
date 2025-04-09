@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "607333863548",
+    "project_id": "worldbank-9c678",
+    "storage_bucket": "worldbank-9c678.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:607333863548:android:74b8d2424250099d05b9f9",
+        "android_client_info": {
+          "package_name": "com.bank_loan.world_bank_loan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAeqCpONPvedXeuBvodpeNdrhMiCxKfXBY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
