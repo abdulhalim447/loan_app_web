@@ -5,6 +5,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:http/http.dart' as http;
 
 import '../auth/saved_login/user_session.dart';
+import 'package:world_bank_loan/core/api/api_endpoints.dart';
 
 class HomeBannerSlider extends StatefulWidget {
   const HomeBannerSlider({super.key});
@@ -30,42 +31,52 @@ class _HomeBannerSliderState extends State<HomeBannerSlider> {
       // Get token from shared preferences
       String? token = await UserSession.getToken();
       if (token == null) {
-        setState(() {
-          _errorMessage = "User token not found.";
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _errorMessage = "User token not found.";
+            _isLoading = false;
+          });
+        }
         return;
       }
 
       // Make API call
       final response = await http.get(
-        Uri.parse('https://wbli.org/api/slides'),
+        Uri.parse(ApiEndpoints.slides),
         headers: {
           'Authorization': 'Bearer $token',
         },
       );
 
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         // Parse the response
         final data = json.decode(response.body);
-        setState(() {
-          _imageUrls = (data['images'] as List)
-              .map((image) => image['url'] as String)
-              .toList();
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _imageUrls = (data['slides'] as List)
+                .map((image) => image['url'] as String)
+                .toList();
+            _isLoading = false;
+          });
+        }
       } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage =
+                "Failed to load images. Error: ${response.statusCode}";
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         setState(() {
-          _errorMessage =
-              "Failed to load images. Error: ${response.statusCode}";
+          _errorMessage = "An error occurred: $e";
           _isLoading = false;
         });
       }
-    } catch (e) {
-      setState(() {
-        _errorMessage = "An error occurred: $e";
-        _isLoading = false;
-      });
     }
   }
 

@@ -1,50 +1,52 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import 'package:world_bank_loan/bottom_navigation/MainNavigationScreen.dart';
+import 'package:world_bank_loan/core/theme/app_theme.dart';
+import 'package:world_bank_loan/providers/app_provider.dart';
+import 'package:world_bank_loan/screens/loan_apply_screen/loan_apply_screen.dart';
 import 'package:world_bank_loan/screens/splash_screen/splash_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:world_bank_loan/services/notification_service.dart';
+import 'package:world_bank_loan/services/notification_navigation_service.dart';
 
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
 
+  // Initialize notification service
+  final notificationService = NotificationService();
+  await notificationService.initialize();
 
-
-
-void main() {
-  runApp( MyApp());
+  runApp(
+    ProviderScope(
+      child: AppProviders(
+        child: MyApp(),
+      ),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
-      theme: ThemeData(
+      navigatorKey: NotificationNavigationService().navigatorKey,
+      theme: AppTheme.lightTheme().copyWith(
         appBarTheme: AppBarTheme(
-          backgroundColor: Colors.red,
-          foregroundColor: Colors.white
-        ),
-
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red, // Button background color
-            foregroundColor: Colors.white, // Text color
-            shadowColor: Colors.grey, // Shadow color
-            elevation: 5, // Elevation for shadow effect
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12), // Rounded corners
-            ),
-            textStyle: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12), // Padding
-            minimumSize: Size(120, 48), // Minimum button size
+          foregroundColor: Colors.white,
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
+          iconTheme: IconThemeData(color: Colors.white),
+          actionsIconTheme: IconThemeData(color: Colors.white),
         ),
-
-
-
       ),
-
-
       home: SplashScreen(),
     );
   }

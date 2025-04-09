@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import '../../auth/saved_login/user_session.dart';
-
+import 'package:world_bank_loan/core/api/api_endpoints.dart';
 
 class AboutMeScreen extends StatefulWidget {
   const AboutMeScreen({super.key});
@@ -36,7 +36,7 @@ class _AboutMeScreenState extends State<AboutMeScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse("https://wbli.org/api/about"),
+        Uri.parse(ApiEndpoints.about),
         headers: headers,
       );
 
@@ -44,7 +44,7 @@ class _AboutMeScreenState extends State<AboutMeScreen> {
         // Parse the response body if successful
         final data = json.decode(response.body);
         setState(() {
-          aboutText = data['about'].join(", ");  // Assuming 'about' is a list
+          aboutText = data['about'].join(", "); // Assuming 'about' is a list
           isLoading = false;
         });
       } else {
@@ -75,7 +75,7 @@ class _AboutMeScreenState extends State<AboutMeScreen> {
       ),
       body: Center(
         child: isLoading
-            ? const CircularProgressIndicator()  // Show loading spinner while fetching
+            ? const CircularProgressIndicator() // Show loading spinner while fetching
             : Text(aboutText),
       ),
     );

@@ -3,8 +3,11 @@ import 'package:http/http.dart' as http;
 import 'package:world_bank_loan/screens/loan_apply_screen/loan_apply_screen.dart';
 import 'dart:convert';
 import '../../auth/saved_login/user_session.dart';
+import 'package:world_bank_loan/core/api/api_endpoints.dart';
 
 class BankAccountScreen extends StatefulWidget {
+  const BankAccountScreen({super.key});
+
   @override
   _BankAccountScreenState createState() => _BankAccountScreenState();
 }
@@ -37,7 +40,7 @@ class _BankAccountScreenState extends State<BankAccountScreen> {
       return;
     }
 
-    final String apiUrl = 'https://wbli.org/api/getbank';
+    final String apiUrl = ApiEndpoints.getBank;
 
     final response = await http.get(
       Uri.parse(apiUrl),
@@ -91,7 +94,7 @@ class _BankAccountScreenState extends State<BankAccountScreen> {
       return;
     }
 
-    final String apiUrl = 'https://wbli.org/api/savebank';
+    final String apiUrl = ApiEndpoints.saveBank;
 
     final response = await http.post(
       Uri.parse(apiUrl),
@@ -158,7 +161,8 @@ class _BankAccountScreenState extends State<BankAccountScreen> {
                       SizedBox(height: 8.0),
                       _buildTextField('Bank Name', bankNameController),
                       SizedBox(height: 8.0),
-                      _buildTextField('Account Number', accountNumberController,keyboardType: TextInputType.number),
+                      _buildTextField('Account Number', accountNumberController,
+                          keyboardType: TextInputType.number),
                       SizedBox(height: 8.0),
                       _buildTextField('IFC Code', ifcCode),
                       SizedBox(height: 16.0),
@@ -185,10 +189,11 @@ class _BankAccountScreenState extends State<BankAccountScreen> {
   // TextField Widget
   // TextField Widget
   Widget _buildTextField(
-      String label,
-      TextEditingController controller, {
-        TextInputType keyboardType = TextInputType.text, // Default to TextInputType.text
-      }) {
+    String label,
+    TextEditingController controller, {
+    TextInputType keyboardType =
+        TextInputType.text, // Default to TextInputType.text
+  }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType, // Use the parameter here
@@ -205,7 +210,6 @@ class _BankAccountScreenState extends State<BankAccountScreen> {
       },
     );
   }
-
 
   // Save Button Widget
   Widget _buildSaveButton() {

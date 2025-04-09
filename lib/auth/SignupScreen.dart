@@ -1,30 +1,64 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert'; // For JSON encoding
+import 'package:shimmer/shimmer.dart';
 import 'package:world_bank_loan/auth/LoginScreen.dart';
+import 'package:world_bank_loan/auth/saved_login/user_session.dart';
+import 'package:world_bank_loan/bottom_navigation/MainNavigationScreen.dart';
+import 'package:world_bank_loan/core/theme/fintech_theme.dart';
+import 'package:lottie/lottie.dart';
+import 'package:world_bank_loan/core/api/api_endpoints.dart';
 
 class SignupScreen extends StatefulWidget {
+  const SignupScreen({super.key});
+
   @override
   _SignupScreenState createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends State<SignupScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController =
       TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool passwordVisible = false;
   bool confirmPasswordVisible = false;
-  bool isLoading = false; // New variable to manage loading state
-  String countryCode = "+880"; // Default country code
+  String countryCode = "+880";
+  bool isLoading = false;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
     passwordVisible = false;
     confirmPasswordVisible = false;
+    _animationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 1000),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    nameController.dispose();
+    phoneController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
   }
 
   void togglePasswordVisibility() {
@@ -39,68 +73,264 @@ class _SignupScreenState extends State<SignupScreen> {
     });
   }
 
-  // Function to handle sign up API request
-  Future<void> _signUp() async {
-    final String name = nameController.text.trim();
-    final String phone = phoneController.text.trim();
-    final String password = passwordController.text.trim();
-    final String confirmPassword = confirmPasswordController.text.trim();
-
-    if (name.isEmpty ||
-        phone.isEmpty ||
-        password.isEmpty ||
-        confirmPassword.isEmpty) {
-      _showErrorDialog('All fields are required!');
-      return;
+  String? _validateName(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Name is required';
     }
-
-    if (password != confirmPassword) {
-      _showErrorDialog('Passwords do not match!');
-      return;
+    if (value.length < 2) {
+      return 'Name must be at least 2 characters';
     }
+    return null;
+  }
 
-    setState(() {
-      isLoading = true; // Start loading
-    });
+  String? _validatePhone(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Phone number is required';
+    }
+    if (value.length < 5) {
+      return 'Please enter a valid phone number';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Password is required';
+    }
+    if (value.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
+  }
+
+  String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please confirm your password';
+    }
+    if (value != passwordController.text) {
+      return 'Passwords do not match';
+    }
+    return null;
+  }
+
+  Future<void> _signup() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => isLoading = true);
 
     try {
       final response = await http.post(
-        Uri.parse('https://wbli.org/api/register'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse(ApiEndpoints.register),
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
         body: json.encode({
-          'name': name,
+          'phone': phoneController.text.trim(),
           'countryCode': countryCode,
-          'phone': phone,
-          'password': password,
-          'c_password': confirmPassword,
+          'password': passwordController.text.trim(),
+          'c_password': confirmPasswordController.text.trim(),
+          'name': nameController.text.trim(),
         }),
       );
 
-      setState(() {
-        isLoading = false; // Stop loading
-      });
 
-      print("Status Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
+      if (!mounted) return;
+
       if (response.statusCode == 201) {
         final Map<String, dynamic> responseData = json.decode(response.body);
-        if (responseData['message'] == 'User registered successfully!') {
-          // Registration was successful, navigate to LoginScreen
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => LoginScreen()),
-          );
+        if (responseData['success'] == true) {
+          // Get token from the registration response
+          String token = responseData['token'] ?? '';
+
+          if (token.isNotEmpty) {
+            // Save the session data
+            await UserSession.saveSession(token, phoneController.text.trim());
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Registration successful! Logging you in...'),
+                backgroundColor: FintechTheme.success,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(FintechTheme.borderRadius),
+                ),
+              ),
+            );
+
+            Future.delayed(Duration(milliseconds: 500), () {
+              Navigator.pushReplacement(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      MainNavigationScreen(),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  transitionDuration: Duration(milliseconds: 500),
+                ),
+              );
+            });
+          } else {
+            // If token is not available in response, proceed with normal login
+            _automaticLogin();
+          }
         } else {
           _showErrorDialog(responseData['message'] ?? 'Registration failed');
         }
       } else {
-        _showErrorDialog('Failed to sign up. Please try again later.');
+        _showErrorDialog('Failed to register. Please try again later.');
       }
     } catch (error) {
-      setState(() {
-        isLoading = false; // Stop loading in case of error
+      if (!mounted) return;
+      _showErrorDialog(
+          'An error occurred. Please check your connection and try again.');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  // New method to automatically login after registration if token is not provided
+  Future<void> _automaticLogin() async {
+    try {
+      final loginResponse = await http.post(
+        Uri.parse(ApiEndpoints.login),
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'countryCode': countryCode,
+          'phone': phoneController.text.trim(),
+          'password': passwordController.text.trim(),
+        }),
+      );
+
+      if (!mounted) return;
+
+      if (loginResponse.statusCode == 200) {
+        final Map<String, dynamic> loginData = json.decode(loginResponse.body);
+
+        if (loginData['success'] != null && loginData['success']) {
+          // Save token and phone after successful login
+          String token = loginData['token'];
+          await UserSession.saveSession(token, phoneController.text.trim());
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text('Registration successful! Welcome to your account.'),
+              backgroundColor: FintechTheme.success,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(FintechTheme.borderRadius),
+              ),
+            ),
+          );
+
+          // Navigate to the main screen
+          Future.delayed(Duration(milliseconds: 500), () {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    MainNavigationScreen(),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  );
+                },
+                transitionDuration: Duration(milliseconds: 500),
+              ),
+            );
+          });
+        } else {
+          // If automatic login fails, redirect to login screen
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Registration successful! Please login.'),
+              backgroundColor: FintechTheme.success,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(FintechTheme.borderRadius),
+              ),
+            ),
+          );
+
+          Future.delayed(Duration(milliseconds: 500), () {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    LoginScreen(),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                transitionDuration: Duration(milliseconds: 500),
+              ),
+            );
+          });
+        }
+      } else {
+        // If automatic login fails, redirect to login screen
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Registration successful! Please login.'),
+            backgroundColor: FintechTheme.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(FintechTheme.borderRadius),
+            ),
+          ),
+        );
+
+        Future.delayed(Duration(milliseconds: 500), () {
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  LoginScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              transitionDuration: Duration(milliseconds: 500),
+            ),
+          );
+        });
+      }
+    } catch (error) {
+      // If automatic login fails with exception, redirect to login screen
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Registration successful! Please login.'),
+          backgroundColor: FintechTheme.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(FintechTheme.borderRadius),
+          ),
+        ),
+      );
+
+      Future.delayed(Duration(milliseconds: 500), () {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                LoginScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: Duration(milliseconds: 500),
+          ),
+        );
       });
-      _showErrorDialog('An error occurred. Please try again.');
     }
   }
 
@@ -108,12 +338,20 @@ class _SignupScreenState extends State<SignupScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(FintechTheme.borderRadius),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.error_outline, color: FintechTheme.error),
+            SizedBox(width: 8),
+            Text('Error', style: TextStyle(color: FintechTheme.error)),
+          ],
+        ),
         content: Text(message),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-            },
+            onPressed: () => Navigator.of(ctx).pop(),
             child: Text('OK'),
           ),
         ],
@@ -123,212 +361,645 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Center(
-        child: SingleChildScrollView(
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: screenWidth > 600
-                  ? 400
-                  : double.infinity, // ওয়েব স্ক্রিনের জন্য নির্দিষ্ট প্রস্থ
-            ),
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(height: 80),
-                Column(
-                  children: [
-                    Icon(
-                      Icons.public,
-                      size: screenWidth > 600 ? 100 : 80,
-                      // স্ক্রিন সাইজ অনুযায়ী আইকনের আকার পরিবর্তন
-                      color: Colors.blue,
-                    ),
-                    Text(
-                      'World Bank Development',
-                      style: TextStyle(
-                        fontSize: screenWidth > 600 ? 28 : 24,
-                        // স্ক্রিন সাইজ অনুযায়ী টেক্সট সাইজ
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
-                    ),
-                    Text(
-                      'Micro Finance',
-                      style: TextStyle(
-                        fontSize: screenWidth > 600 ? 18 : 16,
-                        color: Colors.blue,
-                      ),
-                    ),
+      body: Stack(
+        children: [
+          // Animated Background
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF2C3E50),
+                    Color(0xFF3498DB),
                   ],
                 ),
-                SizedBox(height: 40),
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Name',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                  ),
+              ),
+            )
+                .animate()
+                .fadeIn(duration: 1000.ms)
+                .shimmer(duration: 2000.ms, delay: 1000.ms),
+          ),
+
+          // Animated Circles
+          Positioned(
+            top: -100,
+            right: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.1),
+              ),
+            )
+                .animate(
+                  onPlay: (controller) => controller.repeat(),
+                )
+                .scaleXY(
+                  duration: 3000.ms,
+                  curve: Curves.easeInOut,
                 ),
-                SizedBox(height: 8),
-                Row(
+          ),
+
+          Positioned(
+            bottom: -50,
+            left: -50,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.1),
+              ),
+            )
+                .animate(
+                  onPlay: (controller) => controller.repeat(),
+                )
+                .scaleXY(
+                  duration: 3000.ms,
+                  curve: Curves.easeInOut,
+                ),
+          ),
+
+          // Main Content
+          SafeArea(
+            child: SingleChildScrollView(
+              physics: ClampingScrollPhysics(),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
                   children: [
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.05),
+                    _buildWelcomeText(),
+                    SizedBox(height: 30),
+                    // Main Card with Animation
                     Container(
+                      margin: EdgeInsets.only(bottom: 24),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8.0),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 20,
+                            offset: Offset(0, 10),
+                          ),
+                        ],
                       ),
-                      padding: EdgeInsets.symmetric(horizontal: 8.0),
-                      child: CountryCodePicker(
-                        onChanged: (country) {
-                          setState(() {
-                            countryCode = country.dialCode ?? "+880";
-                          });
-                        },
-                        initialSelection: 'BD',
-                        favorite: ['+880', 'BD'],
-                        showCountryOnly: false,
-                        showOnlyCountryWhenClosed: false,
-                        alignLeft: false,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(
-                          labelText: 'Phone',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10.0),
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildNameInput()
+                                  .animate()
+                                  .fadeIn(delay: 200.ms, duration: 500.ms)
+                                  .slide(
+                                    begin: Offset(-0.2, 0),
+                                    end: Offset.zero,
+                                    duration: 500.ms,
+                                    curve: Curves.easeOut,
+                                  ),
+                              SizedBox(height: 24),
+                              _buildPhoneInput()
+                                  .animate()
+                                  .fadeIn(delay: 400.ms, duration: 500.ms)
+                                  .slide(
+                                    begin: Offset(-0.2, 0),
+                                    end: Offset.zero,
+                                    duration: 500.ms,
+                                    curve: Curves.easeOut,
+                                  ),
+                              SizedBox(height: 24),
+                              _buildPasswordInput()
+                                  .animate()
+                                  .fadeIn(delay: 600.ms, duration: 500.ms)
+                                  .slide(
+                                    begin: Offset(-0.2, 0),
+                                    end: Offset.zero,
+                                    duration: 500.ms,
+                                    curve: Curves.easeOut,
+                                  ),
+                              SizedBox(height: 24),
+                              _buildConfirmPasswordInput()
+                                  .animate()
+                                  .fadeIn(delay: 800.ms, duration: 500.ms)
+                                  .slide(
+                                    begin: Offset(-0.2, 0),
+                                    end: Offset.zero,
+                                    duration: 500.ms,
+                                    curve: Curves.easeOut,
+                                  ),
+                              SizedBox(height: 32),
+                              _buildSignupButton()
+                                  .animate()
+                                  .fadeIn(delay: 1000.ms, duration: 500.ms)
+                                  .scaleXY(
+                                      begin: 0.8,
+                                      end: 1,
+                                      duration: 500.ms,
+                                      curve: Curves.easeOut),
+                              SizedBox(height: 24),
+                              _buildLoginLink()
+                                  .animate()
+                                  .fadeIn(delay: 1200.ms, duration: 500.ms)
+                                  .slide(
+                                    begin: Offset(0, 0.2),
+                                    end: Offset.zero,
+                                    duration: 500.ms,
+                                    curve: Curves.easeOut,
+                                  ),
+                            ],
                           ),
                         ),
                       ),
-                    ),
+                    ).animate().fadeIn(duration: 800.ms).slide(
+                          begin: Offset(0, 0.3),
+                          end: Offset.zero,
+                          duration: 800.ms,
+                          curve: Curves.easeOut,
+                        ),
                   ],
                 ),
-                SizedBox(height: 20),
-                // Password Field with validation
-                TextField(
-                  controller: passwordController,
-                  obscureText: !passwordVisible,
-                  keyboardType: TextInputType.text,
-                  // Keep this as text input for the password
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        passwordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: togglePasswordVisibility,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    errorText: passwordController.text.length != 6 &&
-                            passwordController.text.isNotEmpty
-                        ? 'Password must be 6 digits'
-                        : null, // Display error if password length is not 6 digits
-                  ),
-                ),
-
-                SizedBox(height: 20),
-
-// Confirm Password Field with validation
-                TextField(
-                  controller: confirmPasswordController,
-                  obscureText: !confirmPasswordVisible,
-                  keyboardType: TextInputType.text, // Keep this as text input
-                  decoration: InputDecoration(
-                    labelText: 'Confirm Password',
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        confirmPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed:
-                          toggleConfirmPasswordVisibility, // Toggle visibility
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    errorText:
-                        _confirmPasswordError(), // Show error if passwords don't match
-                  ),
-                ),
-
-                SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : _signUp,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: EdgeInsets.symmetric(vertical: 16.0),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                    ),
-                    child: isLoading
-                        ? CircularProgressIndicator(
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          )
-                        : Text(
-                            'Register',
-                            style: TextStyle(fontSize: 18, color: Colors.white),
-                          ),
-                  ),
-                ),
-                SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: Text('Already have an account?'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => LoginScreen()),
-                        );
-                      },
-                      child: Text(
-                        'Login',
-                        style: TextStyle(color: Colors.blue),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  // Helper method to check confirm password validity
-  String? _confirmPasswordError() {
-    // If both password and confirmPassword fields are filled, check if they match
-    if (confirmPasswordController.text.isEmpty) {
-      return null; // No error if the field is empty
-    }
-    if (confirmPasswordController.text != passwordController.text) {
-      return 'Passwords do not match'; // Error if passwords do not match
-    }
-    return null; // No error if passwords match
+  Widget _buildWelcomeText() {
+    return Column(
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 15,
+                offset: Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.account_balance_wallet,
+            size: 40,
+            color: Color(0xFF2C3E50),
+          ),
+        )
+            .animate(
+              onPlay: (controller) => controller.repeat(reverse: true),
+            )
+            .scaleXY(
+              begin: 1,
+              end: 1.1,
+              duration: 2000.ms,
+              curve: Curves.easeInOut,
+            )
+            .shimmer(duration: 2000.ms, delay: 1000.ms),
+        SizedBox(height: 24),
+        Text(
+          'Create Account',
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            letterSpacing: 0.5,
+          ),
+        )
+            .animate()
+            .fadeIn(duration: 600.ms)
+            .slide(
+              begin: Offset(0, 0.3),
+              end: Offset.zero,
+              duration: 600.ms,
+              curve: Curves.easeOut,
+            )
+            .shimmer(duration: 1200.ms, delay: 600.ms),
+        SizedBox(height: 12),
+        Text(
+          'Join us to start your financial journey',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.white.withOpacity(0.9),
+            letterSpacing: 0.3,
+          ),
+          textAlign: TextAlign.center,
+        ).animate().fadeIn(delay: 400.ms, duration: 800.ms).slide(
+              begin: Offset(0, 0.3),
+              end: Offset.zero,
+              duration: 800.ms,
+              curve: Curves.easeOut,
+            ),
+      ],
+    );
+  }
+
+  Widget _buildNameInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Full Name',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF2C3E50),
+            letterSpacing: 0.3,
+          ),
+        ),
+        SizedBox(height: 8),
+        TextFormField(
+          controller: nameController,
+          validator: _validateName,
+          style: TextStyle(
+            color: Color(0xFF2C3E50),
+            fontSize: 15,
+          ),
+          decoration: InputDecoration(
+            hintText: 'Enter your full name',
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            prefixIcon:
+                Icon(Icons.person_outline, color: Color(0xFF3498DB), size: 22),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Color(0xFF3498DB), width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.red.shade300),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.red.shade300),
+            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhoneInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Phone Number',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF2C3E50),
+            letterSpacing: 0.3,
+          ),
+        ),
+        SizedBox(height: 8),
+        Row(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: CountryCodePicker(
+                onChanged: (country) {
+                  setState(() {
+                    countryCode = country.dialCode ?? "+880";
+                  });
+                },
+                initialSelection: 'BD',
+                favorite: ['+880', 'BD'],
+                showCountryOnly: false,
+                showOnlyCountryWhenClosed: false,
+                alignLeft: false,
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                textStyle: TextStyle(color: Color(0xFF2C3E50)),
+                flagWidth: 28,
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                validator: _validatePhone,
+                style: TextStyle(
+                  color: Color(0xFF2C3E50),
+                  fontSize: 15,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Enter phone number',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  prefixIcon: Icon(Icons.phone_android,
+                      color: Color(0xFF3498DB), size: 22),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide:
+                        BorderSide(color: Color(0xFF3498DB), width: 1.5),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.red.shade300),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.red.shade300),
+                  ),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPasswordInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Password',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF2C3E50),
+            letterSpacing: 0.3,
+          ),
+        ),
+        SizedBox(height: 8),
+        TextFormField(
+          controller: passwordController,
+          obscureText: !passwordVisible,
+          validator: _validatePassword,
+          style: TextStyle(
+            color: Color(0xFF2C3E50),
+            fontSize: 15,
+          ),
+          decoration: InputDecoration(
+            hintText: 'Enter your password',
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            prefixIcon:
+                Icon(Icons.lock_outline, color: Color(0xFF3498DB), size: 22),
+            suffixIcon: IconButton(
+              icon: Icon(
+                passwordVisible ? Icons.visibility : Icons.visibility_off,
+                color: Colors.grey.shade400,
+                size: 22,
+              ),
+              onPressed: togglePasswordVisibility,
+            ),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Color(0xFF3498DB), width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.red.shade300),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.red.shade300),
+            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConfirmPasswordInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Confirm Password',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF2C3E50),
+            letterSpacing: 0.3,
+          ),
+        ),
+        SizedBox(height: 8),
+        TextFormField(
+          controller: confirmPasswordController,
+          obscureText: !confirmPasswordVisible,
+          validator: _validateConfirmPassword,
+          style: TextStyle(
+            color: Color(0xFF2C3E50),
+            fontSize: 15,
+          ),
+          decoration: InputDecoration(
+            hintText: 'Confirm your password',
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            prefixIcon:
+                Icon(Icons.lock_outline, color: Color(0xFF3498DB), size: 22),
+            suffixIcon: IconButton(
+              icon: Icon(
+                confirmPasswordVisible
+                    ? Icons.visibility
+                    : Icons.visibility_off,
+                color: Colors.grey.shade400,
+                size: 22,
+              ),
+              onPressed: toggleConfirmPasswordVisibility,
+            ),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Color(0xFF3498DB), width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.red.shade300),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.red.shade300),
+            ),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSignupButton() {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF2C3E50),
+            Color(0xFF3498DB),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0xFF3498DB).withOpacity(0.3),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: isLoading
+              ? null
+              : () {
+                  // Add button press animation
+                  if (!isLoading) {
+                    _signup();
+                  }
+                },
+          child: Center(
+            child: isLoading
+                ? SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      strokeWidth: 2.5,
+                    )
+                        .animate(
+                          onPlay: (controller) => controller.repeat(),
+                        )
+                        .rotate(
+                          duration: 1500.ms,
+                          curve: Curves.linear,
+                        ),
+                  )
+                : Text(
+                    'Register',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  )
+                    .animate(
+                      onPlay: (controller) => controller.repeat(reverse: true),
+                    )
+                    .shimmer(
+                      duration: 2000.ms,
+                      color: Colors.white.withOpacity(0.8),
+                    ),
+          ),
+        ),
+      ),
+    )
+        .animate(
+          onPlay: (controller) => controller.repeat(reverse: true),
+        )
+        .scaleXY(
+          begin: 1,
+          end: 1.02,
+          duration: 1500.ms,
+          curve: Curves.easeInOut,
+        );
+  }
+
+  Widget _buildLoginLink() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'Already have an account?',
+          style: TextStyle(
+            color: Color(0xFF2C3E50),
+            fontSize: 13,
+          ),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    LoginScreen(),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                transitionDuration: Duration(milliseconds: 300),
+              ),
+            );
+          },
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: Size(0, 36),
+          ),
+          child: Text(
+            'Login',
+            style: TextStyle(
+              color: Color(0xFF3498DB),
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
