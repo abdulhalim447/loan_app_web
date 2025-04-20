@@ -19,6 +19,13 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
+  <!-- Performance optimizations -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="main.dart.js" as="script">
+  <link rel="preload" href="flutter.js" as="script">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -31,8 +38,214 @@
 
   <title>world_bank_loan</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Removing Firebase SDK -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script> -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script> -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script> -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script> -->
+  
+  <!-- Removing Firebase Configuration -->
+  <!-- <script src="firebase-config.js"></script> -->
+
+  <script>
+    // The value below is injected by flutter build, do not touch.
+    const serviceWorkerVersion = null;
+
+    // Track if the loading element has been disposed
+    let loadingIsDisposed = false;
+
+    // Helper function to handle loading completion
+    function handleLoadingComplete() {
+      if (!loadingIsDisposed) {
+        const splashScreen = document.getElementById('splash-screen');
+        if (splashScreen) {
+          splashScreen.classList.add('splash-screen-fade-out');
+          setTimeout(() => {
+            if (splashScreen && splashScreen.parentNode) {
+              splashScreen.parentNode.removeChild(splashScreen);
+            }
+            loadingIsDisposed = true;
+          }, 600);
+        }
+      }
+    }
+
+    // Handle errors more gracefully
+    window.addEventListener('error', function(e) {
+      console.error('Error during app initialization:', e);
+      const loadingText = document.getElementById('loading-text');
+      if (loadingText) {
+        loadingText.innerText = "Error loading app. Please refresh the page.";
+      }
+    });
+  </script>
+  <!-- This script adds the flutter initialization JS code -->
+  <script src="flutter.js" defer></script>
+  
+  <!-- Add inline styles for loading indicator -->
+  <style>
+    body {
+      background-color: #2C3E50;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    #splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #2C3E50;
+      z-index: 9999;
+      transition: opacity 0.5s ease-in-out;
+    }
+    
+    .splash-screen-fade-out {
+      opacity: 0 !important;
+    }
+    
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    
+    .logo-container {
+      width: 100px;
+      height: 100px;
+      background-color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .logo {
+      font-size: 60px;
+      color: #2C3E50;
+    }
+    
+    .app-title {
+      color: white;
+      font-family: 'Arial', sans-serif;
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .app-subtitle {
+      color: rgba(255, 255, 255, 0.8);
+      font-family: 'Arial', sans-serif;
+      font-size: 14px;
+      margin-bottom: 30px;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 15px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      color: rgba(255, 255, 255, 0.8);
+      font-family: 'Arial', sans-serif;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <!-- Loading indicator that shows before Flutter initializes -->
+  <div id="splash-screen">
+    <div class="loading-container">
+      <div class="logo-container">
+        <div class="logo">🏦</div>
+      </div>
+      <div class="app-title">World Bank Loan</div>
+      <div class="app-subtitle">Your Trusted Financial Partner</div>
+      <div class="loading-spinner"></div>
+      <div id="loading-text" class="loading-text">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('load', function(ev) {
+      // Update loading message
+      const loadingText = document.getElementById('loading-text');
+      if (loadingText) {
+        loadingText.innerText = "Starting application...";
+      }
+      
+      // Track last activity timestamp to detect dormant tabs
+      let lastActivityTime = Date.now();
+      
+      // Update activity time on user interaction
+      document.addEventListener('mousemove', () => lastActivityTime = Date.now());
+      document.addEventListener('keydown', () => lastActivityTime = Date.now());
+      document.addEventListener('touchstart', () => lastActivityTime = Date.now());
+      
+      // Check if app has been inactive for too long
+      const checkInactivity = setInterval(() => {
+        const inactiveTime = Date.now() - lastActivityTime;
+        // If inactive for more than 5 minutes, we'll refresh on next user interaction
+        if (inactiveTime > 5 * 60 * 1000 && document.visibilityState === 'visible') {
+          clearInterval(checkInactivity);
+          // Add refresh listener on next interaction
+          const refreshOnActivity = () => {
+            window.location.reload();
+            document.removeEventListener('mousemove', refreshOnActivity);
+            document.removeEventListener('keydown', refreshOnActivity);
+            document.removeEventListener('touchstart', refreshOnActivity);
+          };
+          document.addEventListener('mousemove', refreshOnActivity);
+          document.addEventListener('keydown', refreshOnActivity);
+          document.addEventListener('touchstart', refreshOnActivity);
+        }
+      }, 30000); // Check every 30 seconds
+      
+      // Initialize the Flutter engine
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine({
+            // Set renderer to canvaskit for better consistency
+            renderer: "canvaskit",
+            // Precompile for better startup time
+            useColorEmoji: false
+          }).then(function(appRunner) {
+            // Let Flutter handle the splash screen removal
+            appRunner.runApp();
+          }).catch(function(error) {
+            console.error('Failed to initialize engine:', error);
+            if (loadingText) {
+              loadingText.innerText = "Failed to initialize. Please refresh.";
+            }
+          });
+        }
+      });
+    });
+  </script>
 </body>
 </html>

@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:world_bank_loan/bottom_navigation/MainNavigationScreen.dart';
 import 'package:world_bank_loan/screens/loan_apply_screen/loan_apply_screen.dart';
 import 'package:world_bank_loan/screens/profile_section/profile_screen.dart';
+// import 'package:world_bank_loan/services/notification_service.dart';
 
 /// Service to handle navigation when a notification is tapped
 class NotificationNavigationService {
   // Singleton pattern
   static final NotificationNavigationService _instance =
       NotificationNavigationService._internal();
+
+  // Global navigator key
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   // Factory constructor to return the same instance
   factory NotificationNavigationService() {
@@ -16,9 +20,6 @@ class NotificationNavigationService {
 
   // Internal constructor
   NotificationNavigationService._internal();
-
-  // Global key to access the navigator state without context
-  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   /// Navigate to the appropriate screen based on notification data
   Future<void> navigateBasedOnNotification(Map<String, dynamic> data) async {

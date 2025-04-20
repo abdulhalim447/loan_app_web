@@ -5,14 +5,15 @@ import 'package:world_bank_loan/providers/personal_info_provider.dart';
 import 'package:world_bank_loan/screens/loan_apply_screen/loan_apply_screen.dart';
 import 'package:world_bank_loan/core/api/api_service.dart';
 import 'package:world_bank_loan/auth/saved_login/user_session.dart';
+import 'package:world_bank_loan/core/widgets/responsive_screen.dart';
 import 'steps/personal_info_step.dart';
 import 'steps/nominee_info_step.dart';
 import 'steps/id_verification_step.dart';
 import 'steps/bank_account_step.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 
 class MultiStepPersonalInfoForm extends StatefulWidget {
-  const MultiStepPersonalInfoForm({Key? key}) : super(key: key);
+  const MultiStepPersonalInfoForm({super.key});
 
   @override
   _MultiStepPersonalInfoFormState createState() =>
@@ -76,22 +77,20 @@ class _MultiStepPersonalInfoFormState extends State<MultiStepPersonalInfoForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Consumer<PersonalInfoProvider>(
-          builder: (context, provider, _) {
-            return Column(
-              children: [
-                _buildProgressBar(provider),
-                Expanded(
-                  child: _buildCurrentStep(provider),
-                ),
-                _buildNavigationButtons(provider),
-              ],
-            );
-          },
-        ),
-      ),
+    return Consumer<PersonalInfoProvider>(
+      builder: (context, provider, _) {
+        final content = Column(
+          children: [
+            _buildProgressBar(provider),
+            Expanded(
+              child: _buildCurrentStep(provider),
+            ),
+            _buildNavigationButtons(provider),
+          ],
+        );
+
+        return content.asResponsiveScreen();
+      },
     );
   }
 
@@ -117,11 +116,38 @@ class _MultiStepPersonalInfoFormState extends State<MultiStepPersonalInfoForm> {
         children: [
           Row(
             children: [
-              Text(
-                'Step ${currentStep.index + 1} of $stepCount',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
+              // Back button for all steps
+              GestureDetector(
+                onTap: () {
+                  // For first step, navigate back to previous screen
+                  // For other steps, go to previous step in the form
+                  if (currentStep == PersonalInfoStep.personalInfo) {
+                    Navigator.pop(context);
+                  } else {
+                    provider.previousStep();
+                  }
+                },
+                child: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 16,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'ধাপ ${currentStep.index + 1} এর $stepCount',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ],
@@ -253,7 +279,7 @@ class _MultiStepPersonalInfoFormState extends State<MultiStepPersonalInfoForm> {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Your personal information has been verified. Submission is disabled.',
+                      'আপনার ব্যক্তিগত তথ্য যাচাই করা হয়েছে। জমা দেওয়া নিষ্ক্রিয় করা হয়েছে।',
                       style: TextStyle(
                         color: Colors.green.shade800,
                         fontSize: 12,
@@ -266,14 +292,14 @@ class _MultiStepPersonalInfoFormState extends State<MultiStepPersonalInfoForm> {
 
           Row(
             children: [
-              // Back button
+              // Back button in bottom navigation
               if (!isFirstStep)
                 Expanded(
                   flex: 2,
                   child: OutlinedButton.icon(
                     onPressed: () => provider.previousStep(),
                     icon: Icon(Icons.arrow_back),
-                    label: Text('Back'),
+                    label: Text('পিছনে'),
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: 12),
                       side: BorderSide(color: Colors.cyan),
@@ -308,35 +334,35 @@ class _MultiStepPersonalInfoFormState extends State<MultiStepPersonalInfoForm> {
                             switch (provider.currentStep) {
                               case PersonalInfoStep.personalInfo:
                                 errorMessage =
-                                    'Please fill in all personal information fields correctly';
+                                    'অনুগ্রহ করে সমস্ত ব্যক্তিগত তথ্য ফিল্ডগুলি সঠিকভাবে পূরণ করুন';
                                 break;
                               case PersonalInfoStep.nomineeInfo:
                                 errorMessage =
-                                    'Please fill in all nominee information fields correctly';
+                                    'অনুগ্রহ করে সমস্ত মনোনীত ব্যক্তির তথ্য ফিল্ডগুলি সঠিকভাবে পূরণ করুন';
                                 break;
                               case PersonalInfoStep.idVerification:
                                 // Simple error message that doesn't check for signature
                                 if (provider.frontIdImagePath == null ||
                                     provider.frontIdImagePath!.isEmpty) {
                                   errorMessage =
-                                      'Please upload front side of your NID';
+                                      'অনুগ্রহ করে আপনার এনআইডির সামনের অংশ আপলোড করুন';
                                 } else if (provider.backIdImagePath == null ||
                                     provider.backIdImagePath!.isEmpty) {
                                   errorMessage =
-                                      'Please upload back side of your NID';
+                                      'অনুগ্রহ করে আপনার এনআইডির পিছনের অংশ আপলোড করুন';
                                 } else if (provider.selfieWithIdImagePath ==
                                         null ||
                                     provider.selfieWithIdImagePath!.isEmpty) {
                                   errorMessage =
-                                      'Please take a selfie with your ID';
+                                      'অনুগ্রহ করে আপনার এনআইডির সাথে একটি সেলফি তুলুন';
                                 } else {
                                   errorMessage =
-                                      'Please complete ID verification with all required documents';
+                                      'অনুগ্রহ করে সমস্ত প্রয়োজনীয় নথি সহ আইডি যাচাইকরণ সম্পূর্ণ করুন';
                                 }
                                 break;
                               case PersonalInfoStep.bankAccount:
                                 errorMessage =
-                                    'Please fill in all bank account details correctly';
+                                    'অনুগ্রহ করে সমস্ত ব্যাংক অ্যাকাউন্টের বিবরণ সঠিকভাবে পূরণ করুন';
                                 break;
                             }
                             showValidationError(errorMessage);
@@ -344,13 +370,13 @@ class _MultiStepPersonalInfoFormState extends State<MultiStepPersonalInfoForm> {
                           }
 
                           if (isLastStep) {
-                            _submitForm(provider);
+                            _submitForm();
                           } else {
                             provider.nextStep();
                           }
                         },
                   icon: Icon(isLastStep ? Icons.check : Icons.arrow_forward),
-                  label: Text(isLastStep ? 'Submit' : 'Continue'),
+                  label: Text(isLastStep ? 'জমা দিন' : 'পরবর্তী'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.cyan,
                     foregroundColor: Colors.white,
@@ -373,44 +399,44 @@ class _MultiStepPersonalInfoFormState extends State<MultiStepPersonalInfoForm> {
   String _getStepTitle(PersonalInfoStep step) {
     switch (step) {
       case PersonalInfoStep.personalInfo:
-        return 'Personal Information';
+        return 'ব্যক্তিগত তথ্য';
       case PersonalInfoStep.nomineeInfo:
-        return 'Nominee Information';
+        return 'মনোনীত ব্যক্তির তথ্য';
       case PersonalInfoStep.idVerification:
-        return 'ID Verification';
+        return 'আইডি যাচাইকরণ';
       case PersonalInfoStep.bankAccount:
-        return 'Bank Account';
+        return 'ব্যাংক অ্যাকাউন্ট';
     }
   }
 
   String _getStepSubtitle(PersonalInfoStep step) {
     switch (step) {
       case PersonalInfoStep.personalInfo:
-        return 'Your basic details';
+        return 'আপনার মৌলিক বিবরণ';
       case PersonalInfoStep.nomineeInfo:
-        return 'Add a nominee for your account';
+        return 'আপনার অ্যাকাউন্টের জন্য একজন মনোনীত ব্যক্তি যোগ করুন';
       case PersonalInfoStep.idVerification:
-        return 'Upload your ID documents';
+        return 'আপনার আইডি ডকুমেন্ট আপলোড করুন';
       case PersonalInfoStep.bankAccount:
-        return 'Add your bank account details';
+        return 'আপনার ব্যাংক অ্যাকাউন্টের বিবরণ যোগ করুন';
     }
   }
 
-  Future<void> _submitForm(PersonalInfoProvider provider) async {
-    // Show a loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: CircularProgressIndicator(
-          color: Colors.cyan,
-        ),
-      ),
-    );
+  Future<void> _submitForm() async {
+    final provider = Provider.of<PersonalInfoProvider>(context, listen: false);
+    final apiService = ApiService();
 
     try {
-      // Create the API service
-      final apiService = ApiService();
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: CircularProgressIndicator(
+            color: Colors.cyan,
+          ),
+        ),
+      );
 
       // Verify token is available before proceeding
       final token = await UserSession.getToken();
@@ -426,11 +452,11 @@ class _MultiStepPersonalInfoFormState extends State<MultiStepPersonalInfoForm> {
               children: [
                 Icon(Icons.error_outline, color: Colors.red),
                 SizedBox(width: 8),
-                Text('Authentication Error'),
+                Text('প্রমাণীকরণ ত্রুটি'),
               ],
             ),
             content: Text(
-                'You need to be logged in to submit personal information. Please log in again.'),
+                'ব্যক্তিগত তথ্য জমা দিতে আপনাকে লগইন করতে হবে। অনুগ্রহ করে আবার লগইন করুন।'),
             actions: [
               TextButton(
                 onPressed: () {
@@ -439,7 +465,7 @@ class _MultiStepPersonalInfoFormState extends State<MultiStepPersonalInfoForm> {
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.red,
                 ),
-                child: Text('OK'),
+                child: Text('ঠিক আছে'),
               ),
             ],
           ),
@@ -447,243 +473,223 @@ class _MultiStepPersonalInfoFormState extends State<MultiStepPersonalInfoForm> {
         return;
       }
 
-      // Validate that all required files exist
-      final selfie = provider.selfieWithIdImagePath != null
-          ? File(provider.selfieWithIdImagePath!)
-          : throw Exception('Selfie image is required');
+      // Handle both web and mobile platforms with a unified approach
+      // Check for binary image data first (especially for web)
+      File? selfieFile;
+      File? nidFrontFile;
+      File? nidBackFile;
+      File? signatureFile;
 
-      final nidFrontImage = provider.frontIdImagePath != null
-          ? File(provider.frontIdImagePath!)
-          : throw Exception('Front ID image is required');
-
-      final nidBackImage = provider.backIdImagePath != null
-          ? File(provider.backIdImagePath!)
-          : throw Exception('Back ID image is required');
-
-      // Check if signature exists, create a dummy one if not to avoid crashes
-      File signature;
-      if (provider.signatureImagePath != null &&
-          provider.signatureImagePath!.isNotEmpty) {
-        if (provider.signatureImagePath == 'signature_provided') {
-          // For the special placeholder case, create a blank signature
-          try {
-            // Create a small blank PNG as the signature
-            final tempDir = await getTemporaryDirectory();
-            final blankSignaturePath = '${tempDir.path}/blank_signature.png';
-            final file = File(blankSignaturePath);
-
-            // If file doesn't exist yet, create it
-            if (!await file.exists()) {
-              // Just use a copy of another image as a placeholder
-              signature = selfie;
-            } else {
-              signature = file;
-            }
-          } catch (e) {
-            debugPrint('Error creating blank signature: $e');
-            // Fallback to selfie as placeholder
-            signature = selfie;
-          }
-        } else {
-          // Normal case with a real file path
-          try {
-            signature = File(provider.signatureImagePath!);
-            if (!await signature.exists()) {
-              debugPrint(
-                  'Signature file does not exist, using selfie as fallback');
-              signature = selfie;
-            }
-          } catch (e) {
-            debugPrint('Error loading signature file: $e');
-            signature = selfie;
-          }
+      // Handle web platform
+      if (kIsWeb) {
+        // Validate image data
+        if (provider.selfieWithIdImageBytes == null) {
+          throw Exception('Selfie image is required');
         }
-      } else {
-        // No signature provided
-        signature = selfie;
+        if (provider.frontIdImageBytes == null) {
+          throw Exception('Front ID image is required');
+        }
+        if (provider.backIdImageBytes == null) {
+          throw Exception('Back ID image is required');
+        }
+
+        // For web, use the modified API call that handles multipart uploads with direct byte data
+        if (kDebugMode) {
+          print('Web form submission with direct binary data:');
+          print('name: ${provider.nameController.text}');
+          print(
+              'Image data available: ${provider.selfieWithIdImageBytes != null}, ${provider.frontIdImageBytes != null}, ${provider.backIdImageBytes != null}, ${provider.signatureImageBytes != null}');
+        }
+
+        final response = await apiService.submitPersonalInfoWithImageBytes(
+          name: provider.nameController.text.trim(),
+          loanPurpose: provider.loanPurposeController.text.trim(),
+          profession: provider.professionController.text.trim(),
+          nomineeRelation: provider.nomineeRelationController.text.trim(),
+          nomineePhone: provider.nomineePhoneController.text.trim(),
+          nomineeName: provider.nomineeNameController.text.trim(),
+          selfieBytes: provider.selfieWithIdImageBytes!,
+          nidFrontBytes: provider.frontIdImageBytes!,
+          nidBackBytes: provider.backIdImageBytes!,
+          signatureBytes: provider.signatureImageBytes,
+          income: provider.monthlyIncomeController.text.trim(),
+          bankuserName: provider.accountHolderController.text.trim(),
+          bankName: provider.bankNameController.text.trim(),
+          account: provider.accountNumberController.text.trim(),
+          branchName: provider.ifcCodeController.text.trim(),
+          nidNumber: provider.idController.text.trim(),
+          edu: provider.educationController.text.isNotEmpty
+              ? provider.educationController.text.trim()
+              : 'Honors',
+          currentAddress: provider.currentAddressController.text.trim(),
+        );
+
+        // Close the loading dialog
+        Navigator.of(context).pop();
+
+        // Show success or error dialog based on response
+        _handleSubmissionResponse(response);
+        return;
       }
 
-      // Make the API call
-      final response = await apiService.submitPersonalInfo(
-        name: provider.nameController.text,
-        loanPurpose: provider.loanPurposeController.text,
-        profession: provider.professionController.text,
-        nomineeRelation: provider.nomineeRelationController.text,
-        nomineePhone: provider.nomineePhoneController.text,
-        nomineeName: provider.nomineeNameController.text,
-        selfie: selfie,
-        nidFrontImage: nidFrontImage,
-        nidBackImage: nidBackImage,
-        signature: signature,
-        income: provider.monthlyIncomeController.text,
-        bankuserName: provider.accountHolderController.text,
-        bankName: provider.bankNameController.text,
-        account: provider.accountNumberController.text,
-        branchName: provider.ifcCodeController.text,
-        nidNumber: provider.idController.text,
-        edu: provider.educationController.text.isNotEmpty
-            ? provider.educationController.text
-            : 'Honors',
-        currentAddress: provider.currentAddressController.text,
-      );
+      // Mobile implementation - read files into memory at submission time
+      try {
+        // Check if we have paths to images
+        if (provider.selfieWithIdImagePath == null ||
+            provider.selfieWithIdImagePath!.isEmpty) {
+          throw Exception('Selfie image is required');
+        }
+        if (provider.frontIdImagePath == null ||
+            provider.frontIdImagePath!.isEmpty) {
+          throw Exception('Front ID image is required');
+        }
+        if (provider.backIdImagePath == null ||
+            provider.backIdImagePath!.isEmpty) {
+          throw Exception('Back ID image is required');
+        }
 
-      // Close the loading dialog
-      Navigator.of(context).pop();
+        // Create File objects from paths
+        selfieFile = File(provider.selfieWithIdImagePath!);
+        nidFrontFile = File(provider.frontIdImagePath!);
+        nidBackFile = File(provider.backIdImagePath!);
 
-      if (response.success) {
-        // Show a success dialog
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green),
-                SizedBox(width: 8),
-                Text('Success'),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Your information has been submitted successfully!'),
-                SizedBox(height: 12),
-                if (response.data != null) ...[
-                  Divider(),
-                  SizedBox(height: 8),
-                  Text(
-                    'Submission Details:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 4),
-                  if (response.data!['user'] != null) ...[
-                    Text('Name: ${response.data!['user']['name']}'),
-                    Text('Bank: ${response.data!['user']['bankName']}'),
-                    Text('Account: ${response.data!['user']['account']}'),
-                    Text('Branch: ${response.data!['user']['branchName']}'),
-                    Text('Status: ${response.data!['user']['status']}'),
-                  ],
-                ],
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => LoanApplicationScreen(),
-                    ),
-                  ); // Navigate to loan application screen
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.cyan,
-                ),
-                child: Text('Go to Loan Application'),
-              ),
-            ],
-          ),
+        // Handle signature if available
+        if (provider.signatureImagePath != null &&
+            provider.signatureImagePath!.isNotEmpty) {
+          signatureFile = File(provider.signatureImagePath!);
+        }
+
+        // Verify files exist
+        if (!await selfieFile.exists()) {
+          throw Exception('Selfie image file not found');
+        }
+        if (!await nidFrontFile.exists()) {
+          throw Exception('Front ID image file not found');
+        }
+        if (!await nidBackFile.exists()) {
+          throw Exception('Back ID image file not found');
+        }
+
+        // Make the API call for mobile platforms with actual Files
+        final response = await apiService.submitPersonalInfo(
+          name: provider.nameController.text,
+          loanPurpose: provider.loanPurposeController.text,
+          profession: provider.professionController.text,
+          nomineeRelation: provider.nomineeRelationController.text,
+          nomineePhone: provider.nomineePhoneController.text,
+          nomineeName: provider.nomineeNameController.text,
+          selfie: selfieFile,
+          nidFrontImage: nidFrontFile,
+          nidBackImage: nidBackFile,
+          signature: signatureFile ??
+              selfieFile, // Use selfie as fallback if no signature
+          income: provider.monthlyIncomeController.text,
+          bankuserName: provider.accountHolderController.text,
+          bankName: provider.bankNameController.text,
+          account: provider.accountNumberController.text,
+          branchName: provider.ifcCodeController.text,
+          nidNumber: provider.idController.text,
+          edu: provider.educationController.text.isNotEmpty
+              ? provider.educationController.text
+              : 'Honors',
+          currentAddress: provider.currentAddressController.text,
         );
-      } else {
-        // Show an error dialog
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Row(
-              children: [
-                Icon(Icons.error_outline, color: Colors.red),
-                SizedBox(width: 8),
-                Text('Error'),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Failed to submit your information:'),
-                SizedBox(height: 8),
-                Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    response.message,
-                    style: TextStyle(color: Colors.red.shade800),
-                  ),
-                ),
-                SizedBox(height: 12),
-                Text(
-                  'Please try again or contact support if the issue persists.',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close the dialog
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red,
-                ),
-                child: Text('OK'),
-              ),
-            ],
-          ),
-        );
+
+        // Close the loading dialog
+        Navigator.of(context).pop();
+
+        // Handle the response
+        _handleSubmissionResponse(response);
+      } catch (e) {
+        throw Exception('Error processing mobile image files: $e');
       }
     } catch (e) {
       // Close the loading dialog
       Navigator.of(context).pop();
 
-      // Show an error dialog
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.error_outline, color: Colors.red),
-              SizedBox(width: 8),
-              Text('Error'),
-            ],
+      // Show an error toast message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(16),
+          duration: Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'DISMISS',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('An error occurred during submission:'),
-              SizedBox(height: 8),
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  e.toString(),
-                  style: TextStyle(color: Colors.red.shade800),
-                ),
-              ),
-              SizedBox(height: 12),
-              Text(
-                'Please check your information and try again.',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-              ),
-            ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-              child: Text('OK'),
-            ),
-          ],
+        ),
+      );
+    }
+  }
+
+  // Helper method to validate web image paths
+  bool _isValidWebImagePath(String path) {
+    return path.startsWith('blob:') || path.startsWith('data:');
+  }
+
+  // Helper method to handle API response
+  void _handleSubmissionResponse(dynamic response) {
+    final provider = Provider.of<PersonalInfoProvider>(context, listen: false);
+
+    if (response.success) {
+      // Show success toast message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('ব্যক্তিগত তথ্য সফলভাবে জমা দেওয়া হয়েছে!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+          margin: EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+
+      // Clear all locally stored personal information data
+      provider.clearSavedData().then((_) {
+        debugPrint(
+            'Successfully cleared locally stored personal information data');
+      }).catchError((error) {
+        debugPrint('Error clearing locally stored data: $error');
+      });
+
+      // Automatically navigate to loan application screen
+      Future.delayed(Duration(milliseconds: 300), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LoanApplicationScreen(),
+          ),
+        );
+      });
+    } else {
+      // Show an error toast message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('তথ্য জমা দিতে ব্যর্থ: ${response.message}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(16),
+          duration: Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'বাতিল',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }

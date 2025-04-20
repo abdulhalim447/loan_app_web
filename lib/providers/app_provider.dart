@@ -9,19 +9,36 @@ import 'personal_info_provider.dart';
 class AppProviders extends StatelessWidget {
   final Widget child;
 
-  const AppProviders({Key? key, required this.child}) : super(key: key);
+  const AppProviders({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => CardProvider()),
-        ChangeNotifierProvider(create: (_) => HomeProvider()),
-        ChangeNotifierProvider(create: (_) => WithdrawProvider()),
-        ChangeNotifierProvider(create: (_) => PersonalInfoProvider()),
+        // Use lazy parameter for providers to improve startup time
+        ChangeNotifierProvider(create: (_) => CardProvider(), lazy: true),
+        ChangeNotifierProvider(create: (_) => HomeProvider(), lazy: true),
+        ChangeNotifierProvider(create: (_) => WithdrawProvider(), lazy: true),
+        ChangeNotifierProvider(
+            create: (_) => PersonalInfoProvider(), lazy: true),
         // Add more providers here as needed
       ],
       child: child,
     );
+  }
+}
+
+/// This is a simplified version that doesn't use providers initially
+/// to improve app startup time
+class EssentialProviders extends StatelessWidget {
+  final Widget child;
+
+  const EssentialProviders({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    // Simply return the child without wrapping it in providers
+    // This avoids the MultiProvider with empty list which causes the error
+    return child;
   }
 }

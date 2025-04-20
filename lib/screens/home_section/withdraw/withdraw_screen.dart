@@ -1,8 +1,9 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:world_bank_loan/providers/withdraw_provider.dart';
+import 'package:world_bank_loan/core/widgets/responsive_screen.dart';
 
 class WithdrawScreen extends StatefulWidget {
   const WithdrawScreen({super.key});
@@ -23,112 +24,115 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFF5F7FA),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: Color(0xFF2D3142)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          "Withdraw",
-          style: TextStyle(
-            color: Color(0xFF2D3142),
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
+    // Build withdraw screen appBar
+    final withdrawAppBar = AppBar(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back_ios, color: Color(0xFF2D3142)),
+        onPressed: () => Navigator.pop(context),
       ),
-      body: Consumer<WithdrawProvider>(
-        builder: (context, withdrawProvider, _) {
-          if (withdrawProvider.isUploading) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text("Uploading payment screenshot...",
-                      style: TextStyle(fontSize: 16)),
-                ],
-              ),
-            );
-          }
+      title: Text(
+        "উত্তোলন",
+        style: TextStyle(
+          color: Color(0xFF2D3142),
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      centerTitle: true,
+    );
 
-          if (withdrawProvider.isSuccess) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_circle, color: Colors.green, size: 80),
-                  SizedBox(height: 24),
-                  Text(
-                    "Payment proof submitted successfully!",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    "We will process your withdrawal request shortly.",
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF3366FF),
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text("Back to Home"),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => withdrawProvider.fetchWithdrawDetails(),
-            child: ListView(
-              padding: EdgeInsets.symmetric(
-                horizontal: MediaQuery.of(context).size.width * 0.04,
-                vertical: 24,
-              ),
+    // Build withdraw screen content
+    final withdrawContent = Consumer<WithdrawProvider>(
+      builder: (context, withdrawProvider, _) {
+        if (withdrawProvider.isUploading) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildBalanceCard(withdrawProvider),
-                SizedBox(height: 24),
-                if (withdrawProvider.message != null &&
-                    withdrawProvider.message.isNotEmpty)
-                  Column(
-                    children: [
-                      _buildMessageCard(withdrawProvider),
-                      SizedBox(height: 16),
-                    ],
-                  ),
-                _buildMobilePaymentOptions(withdrawProvider),
+                CircularProgressIndicator(),
                 SizedBox(height: 16),
-                if (withdrawProvider.fee != null)
-                  _buildFeeCard(withdrawProvider),
-                SizedBox(height: 24),
-                _buildTransactionUpload(withdrawProvider),
-                SizedBox(height: 24),
-              ].animate(interval: 50.ms).fadeIn(duration: 300.ms).slideX(),
+                Text("পেমেন্ট স্ক্রিনশট আপলোড হচ্ছে...",
+                    style: TextStyle(fontSize: 16)),
+              ],
             ),
           );
-        },
-      ),
+        }
+
+        if (withdrawProvider.isSuccess) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: 80),
+                SizedBox(height: 24),
+                Text(
+                  "পেমেন্ট প্রমাণ সফলভাবে জমা দেওয়া হয়েছে!",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  "আমরা শীঘ্রই আপনার উত্তোলন অনুরোধ প্রক্রিয়া করব।",
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF3366FF),
+                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text("হোমে ফিরে যান"),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () => withdrawProvider.fetchWithdrawDetails(),
+          child: ListView(
+            padding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.of(context).size.width * 0.04,
+              vertical: 24,
+            ),
+            children: [
+              _buildBalanceCard(withdrawProvider),
+              SizedBox(height: 24),
+              if (withdrawProvider.message.isNotEmpty)
+                Column(
+                  children: [
+                    _buildMessageCard(withdrawProvider),
+                    SizedBox(height: 16),
+                  ],
+                ),
+              _buildMobilePaymentOptions(withdrawProvider),
+              SizedBox(height: 16),
+              _buildFeeCard(withdrawProvider),
+              SizedBox(height: 24),
+              _buildTransactionUpload(withdrawProvider),
+              SizedBox(height: 24),
+            ].animate(interval: 50.ms).fadeIn(duration: 300.ms).slideX(),
+          ),
+        );
+      },
+    );
+
+    // Return using the responsive wrapper
+    return withdrawContent.asResponsiveScreen(
+      appBar: withdrawAppBar,
+      backgroundColor: Color(0xFFF5F7FA),
     );
   }
 
@@ -159,7 +163,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Withdraw Details",
+                  "উত্তোলন বিবরণ",
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -175,13 +179,13 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                 Row(
                   children: [
                     _buildBalanceItem(
-                        "Available Balance", provider.balance, "₹"),
+                        "উপলব্ধ ব্যালেন্স", provider.balance, "৳"),
                     Container(
                       height: 40,
                       width: 1,
                       color: Colors.white.withOpacity(0.3),
                     ),
-                    _buildBalanceItem("Loan Amount", provider.loan, "₹"),
+                    _buildBalanceItem("ঋণের পরিমাণ", provider.loan, "৳"),
                   ],
                 ),
               ],
@@ -336,7 +340,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Mobile Payment Options",
+                  "মোবাইল পেমেন্ট অপশন",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -373,7 +377,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                 ),
                 SizedBox(height: 16),
                 Text(
-                  "Please make payment to one of these mobile accounts and upload the screenshot below.",
+                  "অনুগ্রহ করে এই মোবাইল অ্যাকাউন্টগুলির একটিতে পেমেন্ট করুন এবং নিচে স্ক্রিনশট আপলোড করুন।",
                   style: TextStyle(
                     fontSize: 14,
                     color: Color(0xFF2D3142).withOpacity(0.7),
@@ -460,7 +464,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
         // Copy to clipboard
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$title number copied to clipboard'),
+            content: Text('$title নম্বর ক্লিপবোর্ডে কপি করা হয়েছে'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -530,7 +534,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Upload Payment Proof",
+            "পেমেন্ট প্রমাণ আপলোড করুন",
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -551,13 +555,10 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                   width: 1,
                 ),
               ),
-              child: provider.image != null
+              child: provider.hasImage
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.file(
-                        provider.image!,
-                        fit: BoxFit.cover,
-                      ),
+                      child: _buildImageWidget(provider),
                     )
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -569,7 +570,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                         ),
                         SizedBox(height: 12),
                         Text(
-                          "Tap to select a screenshot",
+                          "স্ক্রিনশট নির্বাচন করতে ট্যাপ করুন",
                           style: TextStyle(
                             color: Color(0xFF2D3142),
                             fontSize: 14,
@@ -578,7 +579,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                         ),
                         SizedBox(height: 8),
                         Text(
-                          "Upload screenshot of your payment to mobile banking",
+                          "মোবাইল ব্যাংকিং-এ আপনার পেমেন্টের স্ক্রিনশট আপলোড করুন",
                           style: TextStyle(
                             color: Color(0xFF2D3142).withOpacity(0.6),
                             fontSize: 12,
@@ -601,8 +602,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             ),
           SizedBox(height: 24),
           ElevatedButton(
-            onPressed:
-                provider.image == null ? null : () => provider.submitImage(),
+            onPressed: provider.hasImage ? () => provider.submitImage() : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(0xFF3366FF),
               disabledBackgroundColor: Color(0xFF3366FF).withOpacity(0.5),
@@ -612,7 +612,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
               ),
             ),
             child: Text(
-              "Submit Payment Proof",
+              "পেমেন্ট প্রমাণ জমা দিন",
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -620,6 +620,35 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Helper method to render image based on platform
+  Widget _buildImageWidget(WithdrawProvider provider) {
+    if (kIsWeb) {
+      // For web, use Image.memory with the imageBytes
+      if (provider.imageBytes != null) {
+        return Image.memory(
+          provider.imageBytes!,
+          fit: BoxFit.cover,
+        );
+      }
+    } else {
+      // For mobile, use Image.file
+      if (provider.image != null) {
+        return Image.file(
+          provider.image!,
+          fit: BoxFit.cover,
+        );
+      }
+    }
+
+    // Fallback if something went wrong
+    return Center(
+      child: Text(
+        "ইমেজ প্রিভিউ উপলব্ধ নয়",
+        style: TextStyle(color: Colors.red),
       ),
     );
   }
@@ -647,7 +676,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
           Icon(Icons.account_balance_wallet, color: Colors.white),
           SizedBox(width: 12),
           Text(
-            "Processing Fee: ${provider.fee ?? '0'}",
+            "ফি: ${provider.fee ?? '0'}",
             style: TextStyle(
               color: Colors.white,
               fontSize: 16,

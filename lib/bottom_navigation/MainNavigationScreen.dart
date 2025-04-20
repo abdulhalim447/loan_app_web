@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:world_bank_loan/screens/card_section/card_screen.dart';
 import 'package:world_bank_loan/screens/help_section/help_screen.dart';
 import 'package:world_bank_loan/screens/home_section/home_page.dart';
 import 'package:world_bank_loan/screens/profile_section/profile_screen.dart';
-import 'package:water_drop_nav_bar/water_drop_nav_bar.dart';
-import 'package:world_bank_loan/services/notification_service.dart';
+import 'package:world_bank_loan/core/widgets/responsive_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:world_bank_loan/providers/home_provider.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -14,30 +16,82 @@ class MainNavigationScreen extends StatefulWidget {
   _MainNavigationScreenState createState() => _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
+class _MainNavigationScreenState extends State<MainNavigationScreen>
+    with WidgetsBindingObserver {
   final Color navigationBarColor = Colors.white;
   late PageController pageController;
   int selectedIndex = 0;
   late List<Widget> _pages;
   bool _isInit = false;
+  static const String NAV_INDEX_KEY = 'navigation_index';
+
+  // Add a key for exit dialog
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  // Keep track of when the app goes to background
+  DateTime? _pausedTime;
 
   @override
   void initState() {
     super.initState();
-    pageController = PageController(initialPage: selectedIndex);
 
-    // Initialize FCM token and send it to the server
-    _initializeNotifications();
+    // Register lifecycle observer
+    WidgetsBinding.instance.addObserver(this);
+
+    _loadSavedIndex();
   }
 
-  Future<void> _initializeNotifications() async {
-    try {
-      // Refresh and update the FCM token
-      final notificationService = NotificationService();
-      await notificationService.refreshAndUpdateToken();
-    } catch (e) {
-      debugPrint('Error initializing notifications: $e');
+  // Handle app lifecycle changes
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    switch (state) {
+      case AppLifecycleState.paused:
+        // App is in background
+        _pausedTime = DateTime.now();
+        break;
+      case AppLifecycleState.resumed:
+        // App is in foreground again
+        if (_pausedTime != null) {
+          final difference = DateTime.now().difference(_pausedTime!);
+          // If app was in background for more than 5 minutes, refresh data
+          if (difference.inMinutes >= 5) {
+            _refreshCurrentScreen();
+          }
+        }
+        break;
+      default:
+        break;
     }
+  }
+
+  // Refresh the current screen's data
+  void _refreshCurrentScreen() {
+    switch (selectedIndex) {
+      case 0:
+        final homeProvider = Provider.of<HomeProvider>(context, listen: false);
+        homeProvider.fetchUserData();
+        break;
+      // Add other cases for other tabs if needed
+    }
+  }
+
+  // Load saved navigation index
+  Future<void> _loadSavedIndex() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedIndex = prefs.getInt(NAV_INDEX_KEY) ?? 0;
+
+    setState(() {
+      selectedIndex = savedIndex;
+      pageController = PageController(initialPage: selectedIndex);
+    });
+  }
+
+  // Save navigation index
+  Future<void> _saveNavigationIndex(int index) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(NAV_INDEX_KEY, index);
   }
 
   @override
@@ -56,6 +110,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     pageController.dispose();
     super.dispose();
   }
@@ -65,6 +120,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     setState(() {
       selectedIndex = index;
     });
+    await _saveNavigationIndex(index);
   }
 
   Future<void> _navigationHandler(int index) async {
@@ -73,6 +129,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     setState(() {
       selectedIndex = index;
     });
+
+    await _saveNavigationIndex(index);
 
     try {
       await pageController.animateToPage(
@@ -85,17 +143,45 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
+  // Handle back button press
+  Future<bool> _onWillPop() async {
+    if (selectedIndex != 0) {
+      // If not on home screen, navigate to home screen
+      _navigationHandler(0);
+      return false;
+    } else {
+      // If on home screen, show exit dialog
+      return await _showExitConfirmationDialog() ?? false;
+    }
+  }
+
+  // Show dialog to confirm exit
+  Future<bool?> _showExitConfirmationDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('আপনি কি অ্যাপ থেকে বের হতে চান?'),
+        content: const Text('আপনি কি নিশ্চিত যে আপনি অ্যাপ থেকে বের হতে চান?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('না'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('হ্যাঁ'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isInit) return const CircularProgressIndicator();
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        systemNavigationBarColor: Colors.white,
-        systemNavigationBarIconBrightness: Brightness.dark,
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-      ),
+    final navigationContent = WillPopScope(
+      onWillPop: _onWillPop,
       child: Scaffold(
         backgroundColor: Colors.white,
         body: PageView(
@@ -116,39 +202,66 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ],
           ),
           child: SafeArea(
-            child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
-              child: WaterDropNavBar(
-                backgroundColor: navigationBarColor,
-                onItemSelected: _navigationHandler,
-                selectedIndex: selectedIndex,
-                barItems: [
-                  BarItem(
-                    filledIcon: Icons.home_rounded,
-                    outlinedIcon: Icons.home_outlined,
-                  ),
-                  BarItem(
-                    filledIcon: Icons.credit_card_rounded,
-                    outlinedIcon: Icons.credit_card_outlined,
-                  ),
-                  BarItem(
-                    filledIcon: Icons.headset_mic_rounded,
-                    outlinedIcon: Icons.headset_mic_outlined,
-                  ),
-                  BarItem(
-                    filledIcon: Icons.person_rounded,
-                    outlinedIcon: Icons.person_outline_rounded,
-                  ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildNavItem(0, Icons.home_rounded, Icons.home_outlined),
+                  _buildNavItem(
+                      1, Icons.credit_card_rounded, Icons.credit_card_outlined),
+                  _buildNavItem(
+                      2, Icons.headset_mic_rounded, Icons.headset_mic_outlined),
+                  _buildNavItem(
+                      3, Icons.person_rounded, Icons.person_outline_rounded),
                 ],
-                waterDropColor: _getSelectedColor(),
-                bottomPadding:
-                    MediaQuery.of(context).padding.bottom > 0 ? 0 : 10,
-                iconSize: 28,
-                inactiveIconColor: Colors.grey.shade600,
               ),
             ),
           ),
+        ),
+      ),
+    );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+      child: ResponsiveScreen(
+        child: navigationContent,
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData filledIcon, IconData outlinedIcon) {
+    final isSelected = selectedIndex == index;
+    final color = isSelected ? _getSelectedColor() : Colors.grey.shade600;
+
+    return InkWell(
+      onTap: () => _navigationHandler(index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? filledIcon : outlinedIcon,
+              color: color,
+              size: 28,
+            ),
+            if (isSelected)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                width: 5,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
         ),
       ),
     );

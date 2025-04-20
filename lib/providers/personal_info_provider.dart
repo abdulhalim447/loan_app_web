@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:world_bank_loan/core/api/api_service.dart';
-import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data'; // Add import for Uint8List
 
 enum PersonalInfoStep {
   personalInfo,
@@ -17,8 +16,7 @@ class PersonalInfoProvider extends ChangeNotifier {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController currentAddressController =
       TextEditingController();
-  final TextEditingController permanentAddressController =
-      TextEditingController();
+
   final TextEditingController professionController = TextEditingController();
   final TextEditingController monthlyIncomeController = TextEditingController();
   final TextEditingController loanPurposeController = TextEditingController();
@@ -45,6 +43,12 @@ class PersonalInfoProvider extends ChangeNotifier {
   String? backIdImagePath;
   String? selfieWithIdImagePath;
   String? signatureImagePath;
+
+  // Image binary data for direct uploads (especially for web)
+  Uint8List? frontIdImageBytes;
+  Uint8List? backIdImageBytes;
+  Uint8List? selfieWithIdImageBytes;
+  Uint8List? signatureImageBytes;
 
   // Image URLs from API
   String? frontIdImageUrl;
@@ -209,15 +213,58 @@ class PersonalInfoProvider extends ChangeNotifier {
     switch (type) {
       case 'front':
         frontIdImagePath = path;
+        // If path is empty, also clear the bytes
+        if (path.isEmpty) {
+          frontIdImageBytes = null;
+        }
         break;
       case 'back':
         backIdImagePath = path;
+        // If path is empty, also clear the bytes
+        if (path.isEmpty) {
+          backIdImageBytes = null;
+        }
         break;
       case 'selfie':
         selfieWithIdImagePath = path;
+        // If path is empty, also clear the bytes
+        if (path.isEmpty) {
+          selfieWithIdImageBytes = null;
+        }
         break;
       case 'signature':
         signatureImagePath = path;
+        // If path is empty, also clear the bytes
+        if (path.isEmpty) {
+          signatureImageBytes = null;
+        }
+        break;
+    }
+
+    saveData();
+    notifyListeners();
+  }
+
+  // Save image bytes for direct uploads
+  void saveImageBytes(String type, Uint8List bytes) {
+    debugPrint("Saving image bytes for type: $type with ${bytes.length} bytes");
+
+    switch (type) {
+      case 'front':
+        frontIdImageBytes = bytes;
+        frontIdImagePath = 'image_selected'; // Set placeholder path for UI
+        break;
+      case 'back':
+        backIdImageBytes = bytes;
+        backIdImagePath = 'image_selected'; // Set placeholder path for UI
+        break;
+      case 'selfie':
+        selfieWithIdImageBytes = bytes;
+        selfieWithIdImagePath = 'image_selected'; // Set placeholder path for UI
+        break;
+      case 'signature':
+        signatureImageBytes = bytes;
+        signatureImagePath = 'image_selected'; // Set placeholder path for UI
         break;
     }
 
@@ -230,7 +277,7 @@ class PersonalInfoProvider extends ChangeNotifier {
     // Clear form controllers
     nameController.clear();
     currentAddressController.clear();
-    permanentAddressController.clear();
+
     professionController.clear();
     monthlyIncomeController.clear();
     loanPurposeController.clear();
@@ -254,6 +301,12 @@ class PersonalInfoProvider extends ChangeNotifier {
     selfieWithIdImagePath = null;
     signatureImagePath = null;
 
+    // Clear image bytes
+    frontIdImageBytes = null;
+    backIdImageBytes = null;
+    selfieWithIdImageBytes = null;
+    signatureImageBytes = null;
+
     // Reset step and completion status
     _currentStep = PersonalInfoStep.personalInfo;
     _personalInfoCompleted = false;
@@ -275,8 +328,7 @@ class PersonalInfoProvider extends ChangeNotifier {
       // Save form data
       await prefs.setString('pi_name', nameController.text);
       await prefs.setString('pi_currentAddress', currentAddressController.text);
-      await prefs.setString(
-          'pi_permanentAddress', permanentAddressController.text);
+ 
       await prefs.setString('pi_profession', professionController.text);
       await prefs.setString('pi_monthlyIncome', monthlyIncomeController.text);
       await prefs.setString('pi_loanPurpose', loanPurposeController.text);
@@ -296,15 +348,19 @@ class PersonalInfoProvider extends ChangeNotifier {
       await prefs.setString('pi_ifcCode', ifcCodeController.text);
 
       // Save image paths
-      if (frontIdImagePath != null)
+      if (frontIdImagePath != null) {
         await prefs.setString('pi_frontIdImagePath', frontIdImagePath!);
-      if (backIdImagePath != null)
+      }
+      if (backIdImagePath != null) {
         await prefs.setString('pi_backIdImagePath', backIdImagePath!);
-      if (selfieWithIdImagePath != null)
+      }
+      if (selfieWithIdImagePath != null) {
         await prefs.setString(
             'pi_selfieWithIdImagePath', selfieWithIdImagePath!);
-      if (signatureImagePath != null)
+      }
+      if (signatureImagePath != null) {
         await prefs.setString('pi_signatureImagePath', signatureImagePath!);
+      }
 
       // Save step and completion status
       await prefs.setInt('pi_currentStep', _currentStep.index);
@@ -328,8 +384,7 @@ class PersonalInfoProvider extends ChangeNotifier {
       nameController.text = prefs.getString('pi_name') ?? '';
       currentAddressController.text =
           prefs.getString('pi_currentAddress') ?? '';
-      permanentAddressController.text =
-          prefs.getString('pi_permanentAddress') ?? '';
+     
       professionController.text = prefs.getString('pi_profession') ?? '';
       monthlyIncomeController.text = prefs.getString('pi_monthlyIncome') ?? '';
       loanPurposeController.text = prefs.getString('pi_loanPurpose') ?? '';
@@ -392,6 +447,54 @@ class PersonalInfoProvider extends ChangeNotifier {
       for (var key in keys) {
         await prefs.remove(key);
       }
+
+      // Clear all form controllers
+      nameController.clear();
+      currentAddressController.clear();
+     
+      professionController.clear();
+      monthlyIncomeController.clear();
+      loanPurposeController.clear();
+      educationController.clear();
+
+      nomineeNameController.clear();
+      nomineeRelationController.clear();
+      nomineePhoneController.clear();
+
+      nidNameController.clear();
+      idController.clear();
+
+      accountHolderController.clear();
+      bankNameController.clear();
+      accountNumberController.clear();
+      ifcCodeController.clear();
+
+      // Clear image paths
+      frontIdImagePath = null;
+      backIdImagePath = null;
+      selfieWithIdImagePath = null;
+      signatureImagePath = null;
+
+      // Clear image bytes
+      frontIdImageBytes = null;
+      backIdImageBytes = null;
+      selfieWithIdImageBytes = null;
+      signatureImageBytes = null;
+
+      // Reset step and completion status
+      _currentStep = PersonalInfoStep.personalInfo;
+      _personalInfoCompleted = false;
+      _nomineeInfoCompleted = false;
+      _idVerificationCompleted = false;
+      _bankAccountCompleted = false;
+
+      // Reset verification status if needed
+      // Note: We typically don't want to reset verification status as it comes from the server
+      // _isVerified = false;
+
+      debugPrint("All personal information data cleared successfully");
+
+      notifyListeners();
     } catch (e) {
       debugPrint("Error clearing personal info data: $e");
       // Continue even if data couldn't be cleared
@@ -404,7 +507,7 @@ class PersonalInfoProvider extends ChangeNotifier {
     // Dispose all TextEditingControllers
     nameController.dispose();
     currentAddressController.dispose();
-    permanentAddressController.dispose();
+  
     professionController.dispose();
     monthlyIncomeController.dispose();
     loanPurposeController.dispose();
@@ -427,19 +530,24 @@ class PersonalInfoProvider extends ChangeNotifier {
 
   void clearSignature() {
     signatureImagePath = null;
+    signatureImageBytes = null;
     notifyListeners();
   }
 
   bool get hasSignature =>
-      signatureImagePath != null &&
-      signatureImagePath!.isNotEmpty &&
-      (signatureImagePath == 'signature_provided' ||
-          File(signatureImagePath!).existsSync());
+      (signatureImageBytes != null) ||
+      (signatureImagePath != null &&
+          signatureImagePath!.isNotEmpty &&
+          (signatureImagePath == 'image_selected' ||
+              signatureImagePath == 'signature_provided' ||
+              signatureImagePath!.startsWith('blob:') || // Handle web blob URLs
+              signatureImagePath!.startsWith('data:') || // Handle web data URLs
+              File(signatureImagePath!).existsSync()));
 
   bool validatePersonalInfo() {
     return nameController.text.isNotEmpty &&
         currentAddressController.text.isNotEmpty &&
-        permanentAddressController.text.isNotEmpty &&
+      
         professionController.text.isNotEmpty &&
         monthlyIncomeController.text.isNotEmpty &&
         loanPurposeController.text.isNotEmpty &&
@@ -453,14 +561,21 @@ class PersonalInfoProvider extends ChangeNotifier {
   }
 
   bool validateIdVerification() {
+    // Check for image bytes (especially for web)
+    bool hasFrontIdImage = frontIdImageBytes != null ||
+        (frontIdImagePath != null && frontIdImagePath!.isNotEmpty);
+
+    bool hasBackIdImage = backIdImageBytes != null ||
+        (backIdImagePath != null && backIdImagePath!.isNotEmpty);
+
+    bool hasSelfieImage = selfieWithIdImageBytes != null ||
+        (selfieWithIdImagePath != null && selfieWithIdImagePath!.isNotEmpty);
+
     return nidNameController.text.isNotEmpty &&
         idController.text.isNotEmpty &&
-        frontIdImagePath != null &&
-        frontIdImagePath!.isNotEmpty &&
-        backIdImagePath != null &&
-        backIdImagePath!.isNotEmpty &&
-        selfieWithIdImagePath != null &&
-        selfieWithIdImagePath!.isNotEmpty;
+        hasFrontIdImage &&
+        hasBackIdImage &&
+        hasSelfieImage;
   }
 
   bool validateBankAccount() {

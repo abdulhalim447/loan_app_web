@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:world_bank_loan/core/theme/app_theme.dart';
+import 'package:world_bank_loan/core/widgets/responsive_screen.dart';
 import 'package:world_bank_loan/providers/home_provider.dart';
 
 // Add imports for API calls
@@ -11,7 +12,7 @@ import 'package:world_bank_loan/core/api/api_endpoints.dart';
 import 'package:world_bank_loan/auth/saved_login/user_session.dart';
 
 class NotificationScreen extends StatefulWidget {
-  const NotificationScreen({Key? key}) : super(key: key);
+  const NotificationScreen({super.key});
 
   @override
   _NotificationScreenState createState() => _NotificationScreenState();
@@ -176,58 +177,68 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget build(BuildContext context) {
     final homeProvider = Provider.of<HomeProvider>(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: AppTheme.authorityBlue,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: AppTheme.authorityBlue,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
+    // Build notification app bar
+    final notificationAppBar = AppBar(
+      backgroundColor: Colors.white,
+      foregroundColor: AppTheme.authorityBlue,
+      leading: IconButton(
+        icon: Icon(
+          Icons.arrow_back,
+          color: AppTheme.authorityBlue,
         ),
-        title: Text(
-          'Notifications',
-          style: TextStyle(
-            color: AppTheme.authorityBlue,
-            fontWeight: FontWeight.bold,
-          ),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      title: Text(
+        'Notifications',
+        style: TextStyle(
+          color: AppTheme.authorityBlue,
+          fontWeight: FontWeight.bold,
         ),
-        actions: [
-          if (_notifications.any((n) => !n['isRead']))
-            TextButton(
-              onPressed: _markAllAsRead,
-              child: Text(
-                'Mark all as read',
-                style: TextStyle(
-                  color: AppTheme.authorityBlue,
-                  fontWeight: FontWeight.w500,
-                ),
+      ),
+      actions: [
+        if (_notifications.any((n) => !n['isRead']))
+          TextButton(
+            onPressed: _markAllAsRead,
+            child: Text(
+              'Mark all as read',
+              style: TextStyle(
+                color: AppTheme.authorityBlue,
+                fontWeight: FontWeight.w500,
               ),
             ),
-        ],
-      ),
-      body: _isLoading
-          ? _buildLoadingList()
-          : _errorMessage.isNotEmpty
-              ? _buildErrorState()
-              : _notifications.isEmpty
-                  ? _buildEmptyState()
-                  : RefreshIndicator(
-                      onRefresh: _loadNotifications,
-                      color: AppTheme.authorityBlue,
-                      child: ListView.separated(
-                        padding: EdgeInsets.all(16),
-                        itemCount: _notifications.length,
-                        separatorBuilder: (context, index) =>
-                            Divider(height: 1),
-                        itemBuilder: (context, index) {
-                          final notification = _notifications[index];
-                          return _buildNotificationItem(notification);
-                        },
-                      ),
-                    ),
+          ),
+      ],
+    );
+
+    // Build notification content
+    Widget notificationContent;
+
+    if (_isLoading) {
+      notificationContent = _buildLoadingList();
+    } else if (_errorMessage.isNotEmpty) {
+      notificationContent = _buildErrorState();
+    } else if (_notifications.isEmpty) {
+      notificationContent = _buildEmptyState();
+    } else {
+      notificationContent = RefreshIndicator(
+        onRefresh: _loadNotifications,
+        color: AppTheme.authorityBlue,
+        child: ListView.separated(
+          padding: EdgeInsets.all(16),
+          itemCount: _notifications.length,
+          separatorBuilder: (context, index) => Divider(height: 1),
+          itemBuilder: (context, index) {
+            final notification = _notifications[index];
+            return _buildNotificationItem(notification);
+          },
+        ),
+      );
+    }
+
+    // Apply responsive wrapper
+    return notificationContent.asResponsiveScreen(
+      appBar: notificationAppBar,
+      backgroundColor: Colors.white,
     );
   }
 
@@ -392,10 +403,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
           SizedBox(height: 16),
           ElevatedButton(
             onPressed: _loadNotifications,
-            child: Text('Try Again'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.authorityBlue,
             ),
+            child: Text('Try Again'),
           ),
         ],
       ),

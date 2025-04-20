@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:world_bank_loan/providers/personal_info_provider.dart';
+import 'package:world_bank_loan/core/widgets/responsive_screen.dart';
 import 'multi_step_form.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
@@ -61,62 +62,53 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       });
     }
 
+    Widget content;
     if (_isLoading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Personal Information'),
+      content = Center(
+        child: CircularProgressIndicator(
+          color: Colors.cyan,
         ),
-        body: Center(
-          child: CircularProgressIndicator(
-            color: Colors.cyan,
+      );
+    } else if (_errorMessage != null) {
+      content = Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
+              SizedBox(height: 16),
+              Text(
+                "কিছু সমস্যা হয়েছে",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[700]),
+              ),
+              SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _needsInitialization = true;
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.cyan,
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                child: Text('আবার চেষ্টা করুন'),
+              ),
+            ],
           ),
         ),
       );
+    } else {
+      content = MultiStepPersonalInfoForm();
     }
 
-    if (_errorMessage != null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Personal Information'),
-        ),
-        body: Center(
-          child: Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
-                SizedBox(height: 16),
-                Text(
-                  "Something went wrong",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  _errorMessage!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey[700]),
-                ),
-                SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _needsInitialization = true;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.cyan,
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                  child: Text('Try Again'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    return MultiStepPersonalInfoForm();
+    return content.asResponsiveScreen();
   }
 }

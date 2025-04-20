@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import '../auth/saved_login/user_session.dart';
 import 'package:world_bank_loan/core/api/api_endpoints.dart';
@@ -28,11 +28,12 @@ class WithdrawProvider extends ChangeNotifier {
   String _adminBankName = "N/A";
   String _adminAccountName = "N/A";
   String _adminAccountNumber = "N/A";
-  String _adminIfc = "N/A";
-  String _adminUpi = "N/A";
+  final String _adminIfc = "N/A";
+  final String _adminUpi = "N/A";
   String _bkashNumber = "N/A";
   String _nagadNumber = "N/A";
   File? _image;
+  Uint8List? _imageBytes;
   String _errorMessage = '';
   final ImagePicker _picker = ImagePicker();
 
@@ -54,6 +55,8 @@ class WithdrawProvider extends ChangeNotifier {
   String get bkashNumber => _bkashNumber;
   String get nagadNumber => _nagadNumber;
   File? get image => _image;
+  Uint8List? get imageBytes => _imageBytes;
+  bool get hasImage => _image != null || _imageBytes != null;
   String get errorMessage => _errorMessage;
   bool get isLoading => _loadingStatus == WithdrawLoadingStatus.loading;
   bool get hasError => _loadingStatus == WithdrawLoadingStatus.error;
@@ -153,17 +156,43 @@ class WithdrawProvider extends ChangeNotifier {
 
   // Pick image from gallery
   Future<void> pickImage() async {
-    final XFile? pickedFile =
-        await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      _image = File(pickedFile.path);
+    try {
+      if (kIsWeb) {
+        // Web implementation
+        final XFile? pickedFile = await _picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 70,
+        );
+
+        if (pickedFile != null) {
+          // Read as bytes for web
+          _imageBytes = await pickedFile.readAsBytes();
+          _image = null; // Clear file since we're using bytes
+          notifyListeners();
+        }
+      } else {
+        // Mobile implementation
+        final XFile? pickedFile = await _picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 70,
+        );
+
+        if (pickedFile != null) {
+          _image = File(pickedFile.path);
+          // Also keep bytes for uniformity
+          _imageBytes = await pickedFile.readAsBytes();
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      _setError('Failed to pick image: $e');
       notifyListeners();
     }
   }
 
   // Submit image to server
   Future<void> submitImage() async {
-    if (_image == null) {
+    if (!hasImage) {
       _setError('Please select an image');
       return;
     }
@@ -179,53 +208,52 @@ class WithdrawProvider extends ChangeNotifier {
         return;
       }
 
+      // Create a multipart request
       var request = http.MultipartRequest(
         'POST',
         Uri.parse(ApiEndpoints.uploadScreenshot),
       );
 
+      // Add authorization header
       request.headers.addAll({
         'Authorization': 'Bearer $token',
         'Accept': 'application/json',
       });
 
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'image',
-          _image!.path,
-        ),
-      );
+      // Add file
+      if (kIsWeb && _imageBytes != null) {
+        // For web, use bytes
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'image',
+            _imageBytes!,
+            filename: 'payment_screenshot.jpg',
+          ),
+        );
+      } else if (_image != null) {
+        // For mobile, use file
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'image',
+            _image!.path,
+          ),
+        );
+      } else {
+        throw Exception('No image selected');
+      }
 
       // Add required form fields
       request.fields['method'] = 'mobile_banking'; // Add payment method
-      request.fields['transaction_id'] = 'MB' +
-          DateTime.now()
-              .millisecondsSinceEpoch
-              .toString()
-              .substring(0, 8); // Generated transaction ID
+      request.fields['transaction_id'] =
+          'MB${DateTime.now().millisecondsSinceEpoch.toString().substring(0, 8)}'; // Generated transaction ID
       request.fields['amount'] = _fee; // Add the fee amount
 
+      // Send the request
       var streamedResponse = await request.send().timeout(
             const Duration(seconds: 30),
             onTimeout: () => throw Exception('Upload timeout'),
           );
       var response = await http.Response.fromStream(streamedResponse);
-
-      // Debug logging (remove in production)
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
-
-      // Enhance the debugging with more details
-      // Debug logging (remove in production)
-      print('========= API REQUEST DEBUG =========');
-      print('URL: ${ApiEndpoints.uploadScreenshot}');
-      print('Headers: ${request.headers}');
-      print('Fields sent: ${request.fields}');
-      print('Image path: ${_image?.path ?? "null"}');
-      print('========= API RESPONSE DEBUG =========');
-      print('Status: ${response.statusCode}');
-      print('Body: ${response.body}');
-      print('======================================');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -250,6 +278,7 @@ class WithdrawProvider extends ChangeNotifier {
   void reset() {
     _loadingStatus = WithdrawLoadingStatus.initial;
     _image = null;
+    _imageBytes = null;
     _errorMessage = '';
     notifyListeners();
   }

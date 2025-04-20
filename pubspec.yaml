@@ -44,6 +44,7 @@ dependencies:
   shared_preferences: ^2.3.3
   url_launcher: ^6.3.1
   permission_handler: ^11.3.0
+  dio: ^5.4.0
   
   # New dependencies for modernization
   flutter_riverpod: ^2.5.0
@@ -63,9 +64,8 @@ dependencies:
   water_drop_nav_bar: ^2.2.2
   path_provider: ^2.1.2
   syncfusion_flutter_signaturepad: ^28.2.12
-  firebase_messaging: ^15.2.5
-  firebase_core: ^3.13.0
-  flutter_local_notifications: 
+  universal_html: ^2.2.4
+ 
 
 dev_dependencies:
   flutter_test:
@@ -77,6 +77,16 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+
+# Configure native splash screen
+flutter_native_splash:
+  color: "#2C3E50"
+  color_dark: "#042a49"
+  android_12:
+    image: assets/images/credit_card.png
+    icon_background_color: "#2C3E50"
+    icon_background_color_dark: "#042a49"
+  web: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

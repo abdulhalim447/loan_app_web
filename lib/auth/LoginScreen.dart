@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:shimmer/shimmer.dart';
+import 'package:provider/provider.dart';
 import 'package:world_bank_loan/auth/SignupScreen.dart';
 import 'package:world_bank_loan/auth/saved_login/user_session.dart';
 import 'package:world_bank_loan/bottom_navigation/MainNavigationScreen.dart';
 import 'package:world_bank_loan/core/theme/fintech_theme.dart';
 import 'package:world_bank_loan/core/api/api_endpoints.dart';
-import 'package:lottie/lottie.dart';
-import 'package:world_bank_loan/services/notification_service.dart';
+import 'package:world_bank_loan/core/widgets/responsive_screen.dart';
+import 'package:world_bank_loan/providers/home_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -68,20 +68,20 @@ class _LoginScreenState extends State<LoginScreen>
   // Input validation
   String? _validatePhone(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Phone number is required';
+      return 'ফোন নম্বর প্রয়োজন';
     }
     if (value.length < 5) {
-      return 'Please enter a valid phone number';
+      return 'একটি বৈধ ফোন নম্বর লিখুন';
     }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password is required';
+      return 'পাসওয়ার্ড প্রয়োজন';
     }
     if (value.length < 6) {
-      return 'Password must be at least 6 characters';
+      return 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে';
     }
     return null;
   }
@@ -129,18 +129,15 @@ class _LoginScreenState extends State<LoginScreen>
           String token = responseData['token'];
           await UserSession.saveSession(token, phone); // Save token and phone
 
-          // Update FCM token after successful login
-          try {
-            final notificationService = NotificationService();
-            await notificationService.refreshAndUpdateToken();
-          } catch (e) {
-            debugPrint('Error updating FCM token: $e');
-          }
+          // Initialize home provider to fetch data immediately
+          final homeProvider =
+              Provider.of<HomeProvider>(context, listen: false);
+          await homeProvider.initialize();
 
           // Show success animation before navigation
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Login successful! Welcome back.'),
+              content: Text('লগইন সফল! আপনাকে স্বাগতম।'),
               backgroundColor: FintechTheme.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -150,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen>
           );
 
           // Add a slight delay for the success animation
-          Future.delayed(Duration(milliseconds: 500), () {
+          Future.delayed(Duration(milliseconds: 300), () {
             // Navigate to MainNavigationScreen
             Navigator.pushReplacement(
               context,
@@ -164,15 +161,15 @@ class _LoginScreenState extends State<LoginScreen>
                     child: child,
                   );
                 },
-                transitionDuration: Duration(milliseconds: 500),
+                transitionDuration: Duration(milliseconds: 300),
               ),
             );
           });
         } else {
-          _showErrorDialog(responseData['message'] ?? 'Login failed');
+          _showErrorDialog(responseData['message'] ?? 'লগইন ব্যর্থ হয়েছে');
         }
       } else {
-        _showErrorDialog('Failed to login. Please try again later.');
+        _showErrorDialog('লগইন ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
       }
     } catch (error) {
       if (!mounted) return;
@@ -180,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen>
         isLoading = false; // End loading in case of error
       });
       _showErrorDialog(
-          'An error occurred. Please check your connection and try again.');
+          'একটি ত্রুটি ঘটেছে। অনুগ্রহ করে আপনার ইন্টারনেট সংযোগ চেক করুন এবং আবার চেষ্টা করুন।');
     }
   }
 
@@ -196,14 +193,14 @@ class _LoginScreenState extends State<LoginScreen>
           children: [
             Icon(Icons.error_outline, color: FintechTheme.error),
             SizedBox(width: 8),
-            Text('Error', style: TextStyle(color: FintechTheme.error)),
+            Text('ত্রুটি', style: TextStyle(color: FintechTheme.error)),
           ],
         ),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('OK'),
+            child: Text('ঠিক আছে'),
           ),
         ],
       ),
@@ -212,162 +209,166 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Animated Background
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF2C3E50),
-                    Color(0xFF3498DB),
-                  ],
-                ),
+    // Content of the login screen
+    final loginContent = Stack(
+      children: [
+        // Animated Background
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF2C3E50),
+                  Color(0xFF3498DB),
+                ],
               ),
-            )
-                .animate()
-                .fadeIn(duration: 1000.ms)
-                .shimmer(duration: 2000.ms, delay: 1000.ms),
-          ),
+            ),
+          )
+              .animate()
+              .fadeIn(duration: 1000.ms)
+              .shimmer(duration: 2000.ms, delay: 1000.ms),
+        ),
 
-          // Animated Circles
-          Positioned(
-            top: -100,
-            right: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
+        // Animated Circles
+        Positioned(
+          top: -100,
+          right: -100,
+          child: Container(
+            width: 300,
+            height: 300,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.1),
+            ),
+          )
+              .animate(
+                onPlay: (controller) => controller.repeat(),
+              )
+              .scaleXY(
+                duration: 3000.ms,
+                curve: Curves.easeInOut,
               ),
-            )
-                .animate(
-                  onPlay: (controller) => controller.repeat(),
-                )
-                .scaleXY(
-                  duration: 3000.ms,
-                  curve: Curves.easeInOut,
-                ),
-          ),
+        ),
 
-          Positioned(
-            bottom: -50,
-            left: -50,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
+        Positioned(
+          bottom: -50,
+          left: -50,
+          child: Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.1),
+            ),
+          )
+              .animate(
+                onPlay: (controller) => controller.repeat(),
+              )
+              .scaleXY(
+                duration: 3000.ms,
+                curve: Curves.easeInOut,
               ),
-            )
-                .animate(
-                  onPlay: (controller) => controller.repeat(),
-                )
-                .scaleXY(
-                  duration: 3000.ms,
-                  curve: Curves.easeInOut,
-                ),
-          ),
+        ),
 
-          // Main Content
-          SafeArea(
-            child: SingleChildScrollView(
-              physics: ClampingScrollPhysics(),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    SizedBox(height: MediaQuery.of(context).size.height * 0.05),
-                    _buildWelcomeText(),
-                    SizedBox(height: 30),
-                    // Main Card with Animation
-                    Container(
-                      margin: EdgeInsets.only(bottom: 24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 20,
-                            offset: Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildPhoneInput()
-                                  .animate()
-                                  .fadeIn(delay: 400.ms, duration: 500.ms)
-                                  .slide(
-                                    begin: Offset(-0.2, 0),
-                                    end: Offset.zero,
-                                    duration: 500.ms,
-                                    curve: Curves.easeOut,
-                                  ),
-                              SizedBox(height: 24),
-                              _buildPasswordInput()
-                                  .animate()
-                                  .fadeIn(delay: 600.ms, duration: 500.ms)
-                                  .slide(
-                                    begin: Offset(-0.2, 0),
-                                    end: Offset.zero,
-                                    duration: 500.ms,
-                                    curve: Curves.easeOut,
-                                  ),
-                              SizedBox(height: 12),
-                              _buildForgotPassword()
-                                  .animate()
-                                  .fadeIn(delay: 700.ms, duration: 500.ms),
-                              SizedBox(height: 32),
-                              _buildLoginButton()
-                                  .animate()
-                                  .fadeIn(delay: 800.ms, duration: 500.ms)
-                                  .scaleXY(
-                                    begin: 0.8,
-                                    end: 1,
-                                    duration: 500.ms,
-                                    curve: Curves.easeOut,
-                                  ),
-                              SizedBox(height: 24),
-                              _buildRegisterLink()
-                                  .animate()
-                                  .fadeIn(delay: 900.ms, duration: 500.ms)
-                                  .slide(
-                                    begin: Offset(0, 0.2),
-                                    end: Offset.zero,
-                                    duration: 500.ms,
-                                    curve: Curves.easeOut,
-                                  ),
-                            ],
-                          ),
+        // Main Content
+        SafeArea(
+          child: SingleChildScrollView(
+            physics: ClampingScrollPhysics(),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.05),
+                  _buildWelcomeText(),
+                  SizedBox(height: 30),
+                  // Main Card with Animation
+                  Container(
+                    margin: EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 20,
+                          offset: Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildPhoneInput()
+                                .animate()
+                                .fadeIn(delay: 400.ms, duration: 500.ms)
+                                .slide(
+                                  begin: Offset(-0.2, 0),
+                                  end: Offset.zero,
+                                  duration: 500.ms,
+                                  curve: Curves.easeOut,
+                                ),
+                            SizedBox(height: 24),
+                            _buildPasswordInput()
+                                .animate()
+                                .fadeIn(delay: 600.ms, duration: 500.ms)
+                                .slide(
+                                  begin: Offset(-0.2, 0),
+                                  end: Offset.zero,
+                                  duration: 500.ms,
+                                  curve: Curves.easeOut,
+                                ),
+                            SizedBox(height: 12),
+                            _buildForgotPassword()
+                                .animate()
+                                .fadeIn(delay: 700.ms, duration: 500.ms),
+                            SizedBox(height: 32),
+                            _buildLoginButton()
+                                .animate()
+                                .fadeIn(delay: 800.ms, duration: 500.ms)
+                                .scaleXY(
+                                  begin: 0.8,
+                                  end: 1,
+                                  duration: 500.ms,
+                                  curve: Curves.easeOut,
+                                ),
+                            SizedBox(height: 24),
+                            _buildRegisterLink()
+                                .animate()
+                                .fadeIn(delay: 900.ms, duration: 500.ms)
+                                .slide(
+                                  begin: Offset(0, 0.2),
+                                  end: Offset.zero,
+                                  duration: 500.ms,
+                                  curve: Curves.easeOut,
+                                ),
+                          ],
                         ),
                       ),
-                    ).animate().fadeIn(duration: 800.ms).slide(
-                          begin: Offset(0, 0.3),
-                          end: Offset.zero,
-                          duration: 800.ms,
-                          curve: Curves.easeOut,
-                        ),
-                  ],
-                ),
+                    ),
+                  ).animate().fadeIn(duration: 800.ms).slide(
+                        begin: Offset(0, 0.3),
+                        end: Offset.zero,
+                        duration: 800.ms,
+                        curve: Curves.easeOut,
+                      ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+
+    // Use the responsive extension to make the screen responsive
+    return loginContent.asResponsiveScreen(
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.white,
     );
   }
 
@@ -406,7 +407,7 @@ class _LoginScreenState extends State<LoginScreen>
             .shimmer(duration: 2000.ms, delay: 1000.ms),
         SizedBox(height: 24),
         Text(
-          'Welcome Back',
+          'স্বাগতম',
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
@@ -425,7 +426,7 @@ class _LoginScreenState extends State<LoginScreen>
             .shimmer(duration: 1200.ms, delay: 600.ms),
         SizedBox(height: 12),
         Text(
-          'Sign in to continue to your account',
+          'আপনার অ্যাকাউন্টে প্রবেশ করতে সাইন ইন করুন',
           style: TextStyle(
             fontSize: 16,
             color: Colors.white.withOpacity(0.9),
@@ -447,7 +448,7 @@ class _LoginScreenState extends State<LoginScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Phone Number',
+          'ফোন নম্বর',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -498,7 +499,7 @@ class _LoginScreenState extends State<LoginScreen>
                   fontSize: 15,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Enter phone number',
+                  hintText: 'ফোন নম্বর লিখুন',
                   hintStyle: TextStyle(color: Colors.grey.shade400),
                   filled: true,
                   fillColor: Colors.grey.shade50,
@@ -539,7 +540,7 @@ class _LoginScreenState extends State<LoginScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Password',
+          'পাসওয়ার্ড',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -557,7 +558,7 @@ class _LoginScreenState extends State<LoginScreen>
             fontSize: 15,
           ),
           decoration: InputDecoration(
-            hintText: 'Enter your password',
+            hintText: 'আপনার পাসওয়ার্ড লিখুন',
             hintStyle: TextStyle(color: Colors.grey.shade400),
             prefixIcon:
                 Icon(Icons.lock_outline, color: Color(0xFF3498DB), size: 22),
@@ -610,7 +611,7 @@ class _LoginScreenState extends State<LoginScreen>
           minimumSize: Size(0, 36),
         ),
         child: Text(
-          'Forgot Password?',
+          'পাসওয়ার্ড ভুলে গেছেন?',
           style: TextStyle(
             color: Color(0xFF3498DB),
             fontWeight: FontWeight.w600,
@@ -666,7 +667,7 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                   )
                 : Text(
-                    'Login',
+                    'লগইন',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -701,7 +702,7 @@ class _LoginScreenState extends State<LoginScreen>
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'Don\'t have an account?',
+          'অ্যাকাউন্ট নেই?',
           style: TextStyle(
             color: Color(0xFF2C3E50),
             fontSize: 13,
@@ -733,7 +734,7 @@ class _LoginScreenState extends State<LoginScreen>
             minimumSize: Size(0, 36),
           ),
           child: Text(
-            'Register',
+            'রেজিস্টার',
             style: TextStyle(
               color: Color(0xFF3498DB),
               fontWeight: FontWeight.w600,

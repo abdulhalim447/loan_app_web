@@ -1,14 +1,12 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/card_provider.dart';
 import '../../core/theme/app_theme.dart';
-import 'dart:math' as math;
-import 'package:flutter/services.dart' show rootBundle;
+import '../../core/widgets/responsive_screen.dart';
 
 class CardScreen extends StatefulWidget {
-  const CardScreen({Key? key}) : super(key: key);
+  const CardScreen({super.key});
 
   @override
   _CardScreenState createState() => _CardScreenState();
@@ -87,72 +85,79 @@ class _CardScreenState extends State<CardScreen>
   Widget build(BuildContext context) {
     return Consumer<CardProvider>(
       builder: (context, provider, _) {
-        return Scaffold(
-          appBar: AppBar(
-            elevation: 0,
-            backgroundColor: AppTheme.authorityBlue,
-            centerTitle: true,
-            title: Text(
-              'My Card',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            actions: [
-              if (provider.status == CardLoadingStatus.loaded)
-                IconButton(
-                  icon: Icon(Icons.refresh, color: Colors.white),
-                  onPressed: () {
-                    if (!mounted || _isDisposed) return;
-                    provider.fetchCardData();
-                    if (!_isDisposed) {
-                      _animationController.reset();
-                      _animationController.forward();
-                    }
-                  },
-                ),
-            ],
-            systemOverlayStyle: SystemUiOverlayStyle(
-              statusBarColor: Colors.transparent,
-              statusBarIconBrightness: Brightness.light,
-              statusBarBrightness: Brightness.dark,
+        // Build card screen appBar
+        final cardAppBar = AppBar(
+          elevation: 0,
+          backgroundColor: AppTheme.authorityBlue,
+          centerTitle: true,
+          title: Text(
+            'আমার কার্ড',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          body: Stack(
-            children: [
-              // Gradient background
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      AppTheme.authorityBlue,
-                      AppTheme.trustCyan,
-                      AppTheme.backgroundLight,
-                    ],
-                    stops: [0.0, 0.2, 0.4],
-                  ),
-                ),
+          actions: [
+            if (provider.status == CardLoadingStatus.loaded)
+              IconButton(
+                icon: Icon(Icons.refresh, color: Colors.white),
+                onPressed: () {
+                  if (!mounted || _isDisposed) return;
+                  provider.fetchCardData();
+                  if (!_isDisposed) {
+                    _animationController.reset();
+                    _animationController.forward();
+                  }
+                },
               ),
+          ],
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            statusBarBrightness: Brightness.dark,
+          ),
+        );
 
-              SafeArea(
-                child: AnimatedBuilder(
-                  animation: _animationController,
-                  builder: (context, child) {
-                    return FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: SlideTransition(
-                        position: _slideAnimation,
-                        child: _buildBody(provider, context),
-                      ),
-                    );
-                  },
+        // Build card screen content
+        final cardContent = Stack(
+          children: [
+            // Gradient background
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.authorityBlue,
+                    AppTheme.trustCyan,
+                    AppTheme.backgroundLight,
+                  ],
+                  stops: [0.0, 0.2, 0.4],
                 ),
               ),
-            ],
-          ),
+            ),
+
+            SafeArea(
+              child: AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: SlideTransition(
+                      position: _slideAnimation,
+                      child: _buildBody(provider, context),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+
+        // Use the responsive wrapper
+        return cardContent.asResponsiveScreen(
+          appBar: cardAppBar,
+          extendBodyBehindAppBar: true,
         );
       },
     );
@@ -171,7 +176,7 @@ class _CardScreenState extends State<CardScreen>
               ),
               SizedBox(height: 16),
               Text(
-                "Loading your card details...",
+                "আপনার কার্ডের বিবরণ লোড হচ্ছে...",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -216,7 +221,7 @@ class _CardScreenState extends State<CardScreen>
                 ),
                 SizedBox(height: 24),
                 Text(
-                  "Couldn't load card details",
+                  "কার্ডের বিবরণ লোড করা যায়নি",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -225,7 +230,7 @@ class _CardScreenState extends State<CardScreen>
                 ),
                 SizedBox(height: 12),
                 Text(
-                  provider.errorMessage ?? "An unknown error occurred",
+                  provider.errorMessage ?? "একটি অজানা ত্রুটি ঘটেছে",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppTheme.neutral600,
@@ -253,7 +258,7 @@ class _CardScreenState extends State<CardScreen>
                     elevation: 2,
                   ),
                   child: Text(
-                    'Try Again',
+                    'আবার চেষ্টা করুন',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -292,8 +297,8 @@ class _CardScreenState extends State<CardScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildCardDetails(provider),
-                      SizedBox(height: 24),
-                      _buildTransactionHistory(),
+                    
+                  
                     ],
                   ),
                 ),
@@ -313,7 +318,7 @@ class _CardScreenState extends State<CardScreen>
               ),
               SizedBox(height: 16),
               Text(
-                "Initializing...",
+                "প্রস্তুত হচ্ছে...",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -328,7 +333,14 @@ class _CardScreenState extends State<CardScreen>
 
   Widget _buildCreditCard(CardProvider provider, BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth = screenWidth - 48; // Account for padding
+
+    // Limit card width for web platforms to prevent oversized cards
+    final maxCardWidth = 450.0; // Maximum width for the card
+    final cardWidth = screenWidth > 600
+        ? (screenWidth * 0.4)
+            .clamp(300.0, maxCardWidth) // For web/large screens
+        : screenWidth - 48; // For mobile screens (original logic)
+
     final cardHeight = cardWidth * 0.63; // Standard card aspect ratio
 
     return Container(
@@ -339,7 +351,7 @@ class _CardScreenState extends State<CardScreen>
           Padding(
             padding: EdgeInsets.only(left: 8, bottom: 16),
             child: Text(
-              "Your Debit Card",
+              "আপনার ডেবিট কার্ড",
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -462,10 +474,10 @@ class _CardScreenState extends State<CardScreen>
 
                           Spacer(),
 
-                          // Card number with styling
+                          // Account number instead of card number
                           Text(
-                            provider.cardNumber.isNotEmpty
-                                ? _formatCardNumber(provider.cardNumber)
+                            provider.userBankNumber.isNotEmpty
+                                ? _formatCardNumber(provider.userBankNumber)
                                 : '**** **** **** ****',
                             style: TextStyle(
                               color: Colors.white,
@@ -483,7 +495,7 @@ class _CardScreenState extends State<CardScreen>
                           ),
                           SizedBox(height: 20),
 
-                          // Card holder and validity
+                          // Bank name and validity
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -491,7 +503,7 @@ class _CardScreenState extends State<CardScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'CARD HOLDER',
+                                    'ব্যাংকের নাম',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.7),
                                       fontSize: 11,
@@ -500,9 +512,9 @@ class _CardScreenState extends State<CardScreen>
                                   ),
                                   SizedBox(height: 5),
                                   Text(
-                                    provider.cardHolderName.isNotEmpty
-                                        ? provider.cardHolderName.toUpperCase()
-                                        : 'YOUR NAME',
+                                    provider.userBankName.isNotEmpty
+                                        ? provider.userBankName.toUpperCase()
+                                        : 'ব্যাংকের নাম',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 16,
@@ -522,7 +534,7 @@ class _CardScreenState extends State<CardScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'VALID THRU',
+                                    'মেয়াদ শেষ',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.7),
                                       fontSize: 11,
@@ -533,7 +545,7 @@ class _CardScreenState extends State<CardScreen>
                                   Text(
                                     provider.validity.isNotEmpty
                                         ? provider.validity
-                                        : 'MM/YY',
+                                        : 'মাস/বছর',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 16,
@@ -565,63 +577,101 @@ class _CardScreenState extends State<CardScreen>
   }
 
   String _formatCardNumber(String number) {
-    // Format the card number in groups of 4 digits
-    if (number.length != 16) return number;
-    return '${number.substring(0, 4)} ${number.substring(4, 8)} ${number.substring(8, 12)} ${number.substring(12, 16)}';
+    // Format the account number in groups of 4 digits
+    if (number.length < 4) return number;
+
+    // Split the account number into groups of 4
+    final List<String> groups = [];
+    for (int i = 0; i < number.length; i += 4) {
+      int end = i + 4;
+      if (end > number.length) end = number.length;
+      groups.add(number.substring(i, end));
+    }
+
+    return groups.join(' ');
   }
 
   Widget _buildCardDetails(CardProvider provider) {
-    return _buildDetailSection("Card Information", [
+    return _buildDetailSection("অ্যাকাউন্টের তথ্য", [
       _buildDetailItem(
-        "Card Holder",
-        provider.cardHolderName,
-        Icons.person_outline,
+        "ব্যাংকের নাম",
+        provider.userBankName,
+        Icons.account_balance_outlined,
         AppTheme.authorityBlue,
       ),
       _buildDetailItem(
-        "Card Number",
-        provider.cardNumber,
+        "অ্যাকাউন্ট নম্বর",
+        provider.userBankNumber,
         Icons.credit_card_outlined,
         AppTheme.trustCyan,
-      ),
-      _buildDetailItem(
-        "Valid Until",
-        provider.validity,
-        Icons.calendar_today_outlined,
-        Colors.green,
-      ),
-      _buildDetailItem(
-        "Card Type",
-        "Visa Debit",
-        Icons.credit_score_outlined,
-        Colors.purple,
       ),
     ]);
   }
 
-  Widget _buildTransactionHistory() {
-    return _buildDetailSection("Card Services", [
+  Widget _buildBankInformation(CardProvider provider) {
+    // Instead of checking for cardHolderName and cardNumber, check if there's any card information
+    if (provider.cardNumber.isEmpty &&
+        provider.cardHolderName.isEmpty &&
+        provider.cvv.isEmpty &&
+        provider.validity.isEmpty) {
+      return SizedBox.shrink();
+    }
+
+    return _buildDetailSection("কার্ডের তথ্য", [
+      if (provider.cardHolderName.isNotEmpty)
+        _buildDetailItem(
+          "কার্ডধারীর নাম",
+          provider.cardHolderName,
+          Icons.person_outline,
+          Colors.indigo,
+        ),
+      if (provider.cardNumber.isNotEmpty)
+        _buildDetailItem(
+          "কার্ড নম্বর",
+          provider.cardNumber,
+          Icons.account_balance_wallet_outlined,
+          Colors.teal,
+        ),
+      if (provider.validity.isNotEmpty)
+        _buildDetailItem(
+          "মেয়াদ শেষ",
+          provider.validity,
+          Icons.calendar_today_outlined,
+          Colors.orange,
+        ),
+      if (provider.cvv.isNotEmpty)
+        _buildDetailItem(
+          "সিভিভি",
+          provider.cvv,
+          Icons.security_outlined,
+          Colors.purple,
+        ),
+    ]);
+  }
+
+  Widget _buildCardServices() {
+    return _buildDetailSection("কার্ড সেবাসমূহ", [
       _buildFeatureItem(
-        "Balance Check",
-        "Check your current card balance",
+        "ব্যালেন্স চেক",
+        "আপনার বর্তমান কার্ড ব্যালেন্স চেক করুন",
         Icons.account_balance_wallet_outlined,
         AppTheme.authorityBlue,
       ),
       _buildFeatureItem(
-        "Transaction History",
-        "View your recent transactions",
+        "লেনদেনের ইতিহাস",
+        "আপনার সাম্প্রতিক লেনদেন দেখুন",
         Icons.history,
         Colors.orange,
       ),
       _buildFeatureItem(
-        "Card Limits",
-        "Manage your spending limits",
+        "কার্ড লিমিট",
+        "আপনার ব্যয় সীমা পরিচালনা করুন",
         Icons.tune,
         Colors.green,
       ),
       _buildFeatureItem(
-        "Block Card",
-        "Temporarily block your card",
+        "কার্ড ব্লক",
+        "অস্থায়ীভাবে আপনার কার্ড ব্লক করুন",
         Icons.block,
         Colors.red,
       ),
@@ -737,7 +787,7 @@ class _CardScreenState extends State<CardScreen>
             // Handle tap action
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Coming soon: $title'),
+                content: Text('শীঘ্রই আসছে: $title'),
                 backgroundColor: color,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(

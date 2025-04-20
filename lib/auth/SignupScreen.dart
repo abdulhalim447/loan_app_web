@@ -3,13 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:shimmer/shimmer.dart';
 import 'package:world_bank_loan/auth/LoginScreen.dart';
 import 'package:world_bank_loan/auth/saved_login/user_session.dart';
 import 'package:world_bank_loan/bottom_navigation/MainNavigationScreen.dart';
 import 'package:world_bank_loan/core/theme/fintech_theme.dart';
-import 'package:lottie/lottie.dart';
 import 'package:world_bank_loan/core/api/api_endpoints.dart';
+import 'package:world_bank_loan/core/widgets/responsive_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -75,40 +74,40 @@ class _SignupScreenState extends State<SignupScreen>
 
   String? _validateName(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Name is required';
+      return 'নাম প্রয়োজন';
     }
     if (value.length < 2) {
-      return 'Name must be at least 2 characters';
+      return 'নাম কমপক্ষে ২ অক্ষরের হতে হবে';
     }
     return null;
   }
 
   String? _validatePhone(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Phone number is required';
+      return 'ফোন নম্বর প্রয়োজন';
     }
     if (value.length < 5) {
-      return 'Please enter a valid phone number';
+      return 'একটি বৈধ ফোন নম্বর লিখুন';
     }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password is required';
+      return 'পাসওয়ার্ড প্রয়োজন';
     }
     if (value.length < 6) {
-      return 'Password must be at least 6 characters';
+      return 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে';
     }
     return null;
   }
 
   String? _validateConfirmPassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Please confirm your password';
+      return 'পাসওয়ার্ড নিশ্চিত করুন';
     }
     if (value != passwordController.text) {
-      return 'Passwords do not match';
+      return 'পাসওয়ার্ড মিলছে না';
     }
     return null;
   }
@@ -134,7 +133,6 @@ class _SignupScreenState extends State<SignupScreen>
         }),
       );
 
-
       if (!mounted) return;
 
       if (response.statusCode == 201) {
@@ -149,7 +147,7 @@ class _SignupScreenState extends State<SignupScreen>
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Registration successful! Logging you in...'),
+                content: Text('রেজিস্ট্রেশন সফল! লগইন করা হচ্ছে...'),
                 backgroundColor: FintechTheme.success,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
@@ -178,15 +176,17 @@ class _SignupScreenState extends State<SignupScreen>
             _automaticLogin();
           }
         } else {
-          _showErrorDialog(responseData['message'] ?? 'Registration failed');
+          _showErrorDialog(
+              responseData['message'] ?? 'রেজিস্ট্রেশন ব্যর্থ হয়েছে');
         }
       } else {
-        _showErrorDialog('Failed to register. Please try again later.');
+        _showErrorDialog(
+            'রেজিস্ট্রেশন ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
       }
     } catch (error) {
       if (!mounted) return;
       _showErrorDialog(
-          'An error occurred. Please check your connection and try again.');
+          'একটি সমস্যা হয়েছে। অনুগ্রহ করে আপনার ইন্টারনেট সংযোগ চেক করুন এবং আবার চেষ্টা করুন।');
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -220,8 +220,7 @@ class _SignupScreenState extends State<SignupScreen>
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content:
-                  Text('Registration successful! Welcome to your account.'),
+              content: Text('রেজিস্ট্রেশন সফল! আপনার অ্যাকাউন্টে স্বাগতম।'),
               backgroundColor: FintechTheme.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -252,7 +251,7 @@ class _SignupScreenState extends State<SignupScreen>
           // If automatic login fails, redirect to login screen
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Registration successful! Please login.'),
+              content: Text('রেজিস্ট্রেশন সফল! অনুগ্রহ করে লগইন করুন।'),
               backgroundColor: FintechTheme.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -280,7 +279,7 @@ class _SignupScreenState extends State<SignupScreen>
         // If automatic login fails, redirect to login screen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Registration successful! Please login.'),
+            content: Text('রেজিস্ট্রেশন সফল! অনুগ্রহ করে লগইন করুন।'),
             backgroundColor: FintechTheme.success,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -308,7 +307,7 @@ class _SignupScreenState extends State<SignupScreen>
       // If automatic login fails with exception, redirect to login screen
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Registration successful! Please login.'),
+          content: Text('রেজিস্ট্রেশন সফল! অনুগ্রহ করে লগইন করুন।'),
           backgroundColor: FintechTheme.success,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -345,14 +344,14 @@ class _SignupScreenState extends State<SignupScreen>
           children: [
             Icon(Icons.error_outline, color: FintechTheme.error),
             SizedBox(width: 8),
-            Text('Error', style: TextStyle(color: FintechTheme.error)),
+            Text('ত্রুটি', style: TextStyle(color: FintechTheme.error)),
           ],
         ),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('OK'),
+            child: Text('ঠিক আছে'),
           ),
         ],
       ),
@@ -361,177 +360,181 @@ class _SignupScreenState extends State<SignupScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Animated Background
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF2C3E50),
-                    Color(0xFF3498DB),
-                  ],
-                ),
+    // Content of the signup screen
+    final signupContent = Stack(
+      children: [
+        // Animated Background
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF2C3E50),
+                  Color(0xFF3498DB),
+                ],
               ),
-            )
-                .animate()
-                .fadeIn(duration: 1000.ms)
-                .shimmer(duration: 2000.ms, delay: 1000.ms),
-          ),
+            ),
+          )
+              .animate()
+              .fadeIn(duration: 1000.ms)
+              .shimmer(duration: 2000.ms, delay: 1000.ms),
+        ),
 
-          // Animated Circles
-          Positioned(
-            top: -100,
-            right: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
+        // Animated Circles
+        Positioned(
+          top: -100,
+          right: -100,
+          child: Container(
+            width: 300,
+            height: 300,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.1),
+            ),
+          )
+              .animate(
+                onPlay: (controller) => controller.repeat(),
+              )
+              .scaleXY(
+                duration: 3000.ms,
+                curve: Curves.easeInOut,
               ),
-            )
-                .animate(
-                  onPlay: (controller) => controller.repeat(),
-                )
-                .scaleXY(
-                  duration: 3000.ms,
-                  curve: Curves.easeInOut,
-                ),
-          ),
+        ),
 
-          Positioned(
-            bottom: -50,
-            left: -50,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
+        Positioned(
+          bottom: -50,
+          left: -50,
+          child: Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.1),
+            ),
+          )
+              .animate(
+                onPlay: (controller) => controller.repeat(),
+              )
+              .scaleXY(
+                duration: 3000.ms,
+                curve: Curves.easeInOut,
               ),
-            )
-                .animate(
-                  onPlay: (controller) => controller.repeat(),
-                )
-                .scaleXY(
-                  duration: 3000.ms,
-                  curve: Curves.easeInOut,
-                ),
-          ),
+        ),
 
-          // Main Content
-          SafeArea(
-            child: SingleChildScrollView(
-              physics: ClampingScrollPhysics(),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    SizedBox(height: MediaQuery.of(context).size.height * 0.05),
-                    _buildWelcomeText(),
-                    SizedBox(height: 30),
-                    // Main Card with Animation
-                    Container(
-                      margin: EdgeInsets.only(bottom: 24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 20,
-                            offset: Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildNameInput()
-                                  .animate()
-                                  .fadeIn(delay: 200.ms, duration: 500.ms)
-                                  .slide(
-                                    begin: Offset(-0.2, 0),
-                                    end: Offset.zero,
+        // Main Content
+        SafeArea(
+          child: SingleChildScrollView(
+            physics: ClampingScrollPhysics(),
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.05),
+                  _buildWelcomeText(),
+                  SizedBox(height: 30),
+                  // Main Card with Animation
+                  Container(
+                    margin: EdgeInsets.only(bottom: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 20,
+                          offset: Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildNameInput()
+                                .animate()
+                                .fadeIn(delay: 200.ms, duration: 500.ms)
+                                .slide(
+                                  begin: Offset(-0.2, 0),
+                                  end: Offset.zero,
+                                  duration: 500.ms,
+                                  curve: Curves.easeOut,
+                                ),
+                            SizedBox(height: 24),
+                            _buildPhoneInput()
+                                .animate()
+                                .fadeIn(delay: 400.ms, duration: 500.ms)
+                                .slide(
+                                  begin: Offset(-0.2, 0),
+                                  end: Offset.zero,
+                                  duration: 500.ms,
+                                  curve: Curves.easeOut,
+                                ),
+                            SizedBox(height: 24),
+                            _buildPasswordInput()
+                                .animate()
+                                .fadeIn(delay: 600.ms, duration: 500.ms)
+                                .slide(
+                                  begin: Offset(-0.2, 0),
+                                  end: Offset.zero,
+                                  duration: 500.ms,
+                                  curve: Curves.easeOut,
+                                ),
+                            SizedBox(height: 24),
+                            _buildConfirmPasswordInput()
+                                .animate()
+                                .fadeIn(delay: 800.ms, duration: 500.ms)
+                                .slide(
+                                  begin: Offset(-0.2, 0),
+                                  end: Offset.zero,
+                                  duration: 500.ms,
+                                  curve: Curves.easeOut,
+                                ),
+                            SizedBox(height: 32),
+                            _buildSignupButton()
+                                .animate()
+                                .fadeIn(delay: 1000.ms, duration: 500.ms)
+                                .scaleXY(
+                                    begin: 0.8,
+                                    end: 1,
                                     duration: 500.ms,
-                                    curve: Curves.easeOut,
-                                  ),
-                              SizedBox(height: 24),
-                              _buildPhoneInput()
-                                  .animate()
-                                  .fadeIn(delay: 400.ms, duration: 500.ms)
-                                  .slide(
-                                    begin: Offset(-0.2, 0),
-                                    end: Offset.zero,
-                                    duration: 500.ms,
-                                    curve: Curves.easeOut,
-                                  ),
-                              SizedBox(height: 24),
-                              _buildPasswordInput()
-                                  .animate()
-                                  .fadeIn(delay: 600.ms, duration: 500.ms)
-                                  .slide(
-                                    begin: Offset(-0.2, 0),
-                                    end: Offset.zero,
-                                    duration: 500.ms,
-                                    curve: Curves.easeOut,
-                                  ),
-                              SizedBox(height: 24),
-                              _buildConfirmPasswordInput()
-                                  .animate()
-                                  .fadeIn(delay: 800.ms, duration: 500.ms)
-                                  .slide(
-                                    begin: Offset(-0.2, 0),
-                                    end: Offset.zero,
-                                    duration: 500.ms,
-                                    curve: Curves.easeOut,
-                                  ),
-                              SizedBox(height: 32),
-                              _buildSignupButton()
-                                  .animate()
-                                  .fadeIn(delay: 1000.ms, duration: 500.ms)
-                                  .scaleXY(
-                                      begin: 0.8,
-                                      end: 1,
-                                      duration: 500.ms,
-                                      curve: Curves.easeOut),
-                              SizedBox(height: 24),
-                              _buildLoginLink()
-                                  .animate()
-                                  .fadeIn(delay: 1200.ms, duration: 500.ms)
-                                  .slide(
-                                    begin: Offset(0, 0.2),
-                                    end: Offset.zero,
-                                    duration: 500.ms,
-                                    curve: Curves.easeOut,
-                                  ),
-                            ],
-                          ),
+                                    curve: Curves.easeOut),
+                            SizedBox(height: 24),
+                            _buildLoginLink()
+                                .animate()
+                                .fadeIn(delay: 1200.ms, duration: 500.ms)
+                                .slide(
+                                  begin: Offset(0, 0.2),
+                                  end: Offset.zero,
+                                  duration: 500.ms,
+                                  curve: Curves.easeOut,
+                                ),
+                          ],
                         ),
                       ),
-                    ).animate().fadeIn(duration: 800.ms).slide(
-                          begin: Offset(0, 0.3),
-                          end: Offset.zero,
-                          duration: 800.ms,
-                          curve: Curves.easeOut,
-                        ),
-                  ],
-                ),
+                    ),
+                  ).animate().fadeIn(duration: 800.ms).slide(
+                        begin: Offset(0, 0.3),
+                        end: Offset.zero,
+                        duration: 800.ms,
+                        curve: Curves.easeOut,
+                      ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+
+    // Use the responsive extension to make the screen responsive
+    return signupContent.asResponsiveScreen(
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.white,
     );
   }
 
@@ -570,7 +573,7 @@ class _SignupScreenState extends State<SignupScreen>
             .shimmer(duration: 2000.ms, delay: 1000.ms),
         SizedBox(height: 24),
         Text(
-          'Create Account',
+          'অ্যাকাউন্ট তৈরি করুন',
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
@@ -589,7 +592,7 @@ class _SignupScreenState extends State<SignupScreen>
             .shimmer(duration: 1200.ms, delay: 600.ms),
         SizedBox(height: 12),
         Text(
-          'Join us to start your financial journey',
+          'আর্থিক যাত্রা শুরু করতে আমাদের সাথে যোগ দিন',
           style: TextStyle(
             fontSize: 16,
             color: Colors.white.withOpacity(0.9),
@@ -611,7 +614,7 @@ class _SignupScreenState extends State<SignupScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Full Name',
+          'পূর্ণ নাম',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -628,7 +631,7 @@ class _SignupScreenState extends State<SignupScreen>
             fontSize: 15,
           ),
           decoration: InputDecoration(
-            hintText: 'Enter your full name',
+            hintText: 'আপনার পূর্ণ নাম লিখুন',
             hintStyle: TextStyle(color: Colors.grey.shade400),
             prefixIcon:
                 Icon(Icons.person_outline, color: Color(0xFF3498DB), size: 22),
@@ -666,7 +669,7 @@ class _SignupScreenState extends State<SignupScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Phone Number',
+          'ফোন নম্বর',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -678,9 +681,10 @@ class _SignupScreenState extends State<SignupScreen>
         Row(
           children: [
             Container(
+              constraints: BoxConstraints(maxWidth: 90),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade200),
               ),
               child: CountryCodePicker(
@@ -694,9 +698,15 @@ class _SignupScreenState extends State<SignupScreen>
                 showCountryOnly: false,
                 showOnlyCountryWhenClosed: false,
                 alignLeft: false,
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                textStyle: TextStyle(color: Color(0xFF2C3E50)),
-                flagWidth: 28,
+                padding: EdgeInsets.zero,
+                textStyle: TextStyle(
+                  color: Color(0xFF2C3E50),
+                  fontSize: 14,
+                ),
+                flagWidth: 24,
+                showFlag: true,
+                showFlagDialog: true,
+                showDropDownButton: false,
               ),
             ),
             SizedBox(width: 12),
@@ -710,31 +720,29 @@ class _SignupScreenState extends State<SignupScreen>
                   fontSize: 15,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Enter phone number',
+                  hintText: 'ফোন নম্বর লিখুন',
                   hintStyle: TextStyle(color: Colors.grey.shade400),
-                  prefixIcon: Icon(Icons.phone_android,
-                      color: Color(0xFF3498DB), size: 22),
                   filled: true,
                   fillColor: Colors.grey.shade50,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.grey.shade200),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.grey.shade200),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     borderSide:
                         BorderSide(color: Color(0xFF3498DB), width: 1.5),
                   ),
                   errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.red.shade300),
                   ),
                   focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.red.shade300),
                   ),
                   contentPadding:
@@ -753,7 +761,7 @@ class _SignupScreenState extends State<SignupScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Password',
+          'পাসওয়ার্ড',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -771,7 +779,7 @@ class _SignupScreenState extends State<SignupScreen>
             fontSize: 15,
           ),
           decoration: InputDecoration(
-            hintText: 'Enter your password',
+            hintText: 'আপনার পাসওয়ার্ড লিখুন',
             hintStyle: TextStyle(color: Colors.grey.shade400),
             prefixIcon:
                 Icon(Icons.lock_outline, color: Color(0xFF3498DB), size: 22),
@@ -817,7 +825,7 @@ class _SignupScreenState extends State<SignupScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Confirm Password',
+          'পাসওয়ার্ড নিশ্চিত করুন',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -835,7 +843,7 @@ class _SignupScreenState extends State<SignupScreen>
             fontSize: 15,
           ),
           decoration: InputDecoration(
-            hintText: 'Confirm your password',
+            hintText: 'আপনার পাসওয়ার্ড নিশ্চিত করুন',
             hintStyle: TextStyle(color: Colors.grey.shade400),
             prefixIcon:
                 Icon(Icons.lock_outline, color: Color(0xFF3498DB), size: 22),
@@ -930,7 +938,7 @@ class _SignupScreenState extends State<SignupScreen>
                         ),
                   )
                 : Text(
-                    'Register',
+                    'রেজিস্টার',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -965,7 +973,7 @@ class _SignupScreenState extends State<SignupScreen>
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'Already have an account?',
+          'ইতিমধ্যে একটি অ্যাকাউন্ট আছে?',
           style: TextStyle(
             color: Color(0xFF2C3E50),
             fontSize: 13,
@@ -991,7 +999,7 @@ class _SignupScreenState extends State<SignupScreen>
             minimumSize: Size(0, 36),
           ),
           child: Text(
-            'Login',
+            'লগইন',
             style: TextStyle(
               color: Color(0xFF3498DB),
               fontWeight: FontWeight.w600,

@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:world_bank_loan/core/theme/app_theme.dart';
 import 'package:world_bank_loan/core/widgets/custom_button.dart';
 import 'package:world_bank_loan/core/widgets/data_card.dart';
-import 'package:world_bank_loan/core/widgets/progress_tracker.dart';
+import 'package:world_bank_loan/core/widgets/responsive_screen.dart';
 import 'package:world_bank_loan/providers/home_provider.dart';
 import 'package:world_bank_loan/screens/home_section/withdraw/withdraw_screen.dart';
 import 'package:world_bank_loan/screens/loan_apply_screen/loan_apply_screen.dart';
@@ -38,7 +38,11 @@ class _HomeScreenState extends State<HomeScreen>
 
     // Use Future.microtask to ensure the context is ready for Provider
     Future.microtask(() {
-      context.read<HomeProvider>().initialize();
+      final provider = context.read<HomeProvider>();
+      provider.initialize();
+
+      // Start periodic updates when screen initializes
+      provider.startPeriodicUpdates();
     });
   }
 
@@ -47,6 +51,10 @@ class _HomeScreenState extends State<HomeScreen>
     _animationController.dispose();
     _scrollController.dispose();
     _isBalanceVisible.dispose();
+
+    // Stop periodic updates when screen is disposed
+    context.read<HomeProvider>().stopPeriodicUpdates();
+
     super.dispose();
   }
 
@@ -58,218 +66,247 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        title: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            'WORLD BANK',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-        ),
-        centerTitle: true,
-        leading: Consumer<HomeProvider>(
-          builder: (context, provider, _) {
-            return Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: _buildProfileAvatar(provider),
-            );
-          },
-        ),
-        actions: [
-          Consumer<HomeProvider>(
-            builder: (context, provider, _) {
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  IconButton(
-                    icon:
-                        Icon(Icons.notifications_outlined, color: Colors.black),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const NotificationScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  if (provider.unreadNotifications > 0)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          provider.unreadNotifications > 9
-                              ? '9+'
-                              : provider.unreadNotifications.toString(),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-        ],
-        automaticallyImplyLeading: false,
-      ),
-      body: RefreshIndicator(
+    // Build the content of the home screen
+    final homeContent =
+        Consumer<HomeProvider>(builder: (context, homeProvider, _) {
+      // Start animations when data is loaded
+      if (!homeProvider.isLoading &&
+          homeProvider.loadingStatus == HomeLoadingStatus.loaded) {
+        _animationController.forward();
+      }
+
+      return RefreshIndicator(
         onRefresh: _onRefresh,
         color: AppTheme.authorityBlue,
         backgroundColor: Colors.white,
-        child: Consumer<HomeProvider>(builder: (context, homeProvider, _) {
-          // Start animations when data is loaded
-          if (!homeProvider.isLoading &&
-              homeProvider.loadingStatus == HomeLoadingStatus.loaded) {
-            _animationController.forward();
-          }
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              controller: _scrollController,
+              physics: AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 16),
 
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                controller: _scrollController,
-                physics: AlwaysScrollableScrollPhysics(),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: 16),
+                      // Greeting section
+                      Text(
+                        'হ্যালো,',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: AppTheme.neutral600,
+                            ),
+                      )
+                          .animate(controller: _animationController)
+                          .fadeIn(duration: 500.ms, delay: 100.ms)
+                          .slide(
+                              begin: Offset(0, -0.2),
+                              duration: 500.ms,
+                              delay: 100.ms),
+                      Text(
+                        homeProvider.name,
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                      )
+                          .animate(controller: _animationController)
+                          .fadeIn(duration: 500.ms, delay: 200.ms)
+                          .slide(
+                              begin: Offset(0, -0.2),
+                              duration: 500.ms,
+                              delay: 200.ms),
 
-                        // Greeting section
-                        Text(
-                          'Hello,',
-                          style:
-                              Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: AppTheme.neutral600,
-                                  ),
-                        )
-                            .animate(controller: _animationController)
-                            .fadeIn(duration: 500.ms, delay: 100.ms)
-                            .slide(
-                                begin: Offset(0, -0.2),
-                                duration: 500.ms,
-                                delay: 100.ms),
-                        Text(
-                          homeProvider.name,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        )
-                            .animate(controller: _animationController)
-                            .fadeIn(duration: 500.ms, delay: 200.ms)
-                            .slide(
-                                begin: Offset(0, -0.2),
-                                duration: 500.ms,
-                                delay: 200.ms),
+                      SizedBox(height: 24),
 
-                        SizedBox(height: 24),
+                      // Content area
+                      // Balance Card
+                      _buildBalanceCard(homeProvider)
+                          .animate(controller: _animationController)
+                          .fadeIn(duration: 600.ms, delay: 300.ms)
+                          .slide(
+                              begin: Offset(0, 0.2),
+                              duration: 600.ms,
+                              delay: 300.ms),
 
-                        // Content area
-                        // Balance Card
-                        _buildBalanceCard(homeProvider)
-                            .animate(controller: _animationController)
-                            .fadeIn(duration: 600.ms, delay: 300.ms)
-                            .slide(
-                                begin: Offset(0, 0.2),
-                                duration: 600.ms,
-                                delay: 300.ms),
+                      SizedBox(height: 24),
 
-                        SizedBox(height: 24),
+                      // Loan progress
+                      _buildLoanProgress(homeProvider)
+                          .animate(controller: _animationController)
+                          .fadeIn(duration: 600.ms, delay: 400.ms)
+                          .slide(
+                              begin: Offset(0, 0.2),
+                              duration: 600.ms,
+                              delay: 400.ms),
 
-                        // Loan progress
-                        _buildLoanProgress(homeProvider)
-                            .animate(controller: _animationController)
-                            .fadeIn(duration: 600.ms, delay: 400.ms)
-                            .slide(
-                                begin: Offset(0, 0.2),
-                                duration: 600.ms,
-                                delay: 400.ms),
+                      SizedBox(height: 24),
 
-                        SizedBox(height: 24),
+                      // Banner slider
+                      HomeBannerSlider()
+                          .animate(controller: _animationController)
+                          .fadeIn(duration: 600.ms, delay: 500.ms)
+                          .slide(
+                              begin: Offset(0, 0.2),
+                              duration: 600.ms,
+                              delay: 500.ms),
 
-                        // Banner slider
-                        HomeBannerSlider()
-                            .animate(controller: _animationController)
-                            .fadeIn(duration: 600.ms, delay: 500.ms)
-                            .slide(
-                                begin: Offset(0, 0.2),
-                                duration: 600.ms,
-                                delay: 500.ms),
+                      SizedBox(height: 24),
 
-                        SizedBox(height: 24),
+                      // Section Title
+                      Text(
+                        'দ্রুত কার্যক্রম',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                      )
+                          .animate(controller: _animationController)
+                          .fadeIn(duration: 600.ms, delay: 600.ms)
+                          .slide(
+                              begin: Offset(0, 0.2),
+                              duration: 600.ms,
+                              delay: 600.ms),
 
-                        // Section Title
-                        Text(
-                          'Quick Actions',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                        )
-                            .animate(controller: _animationController)
-                            .fadeIn(duration: 600.ms, delay: 600.ms)
-                            .slide(
-                                begin: Offset(0, 0.2),
-                                duration: 600.ms,
-                                delay: 600.ms),
+                      SizedBox(height: 16),
 
-                        SizedBox(height: 16),
-
-                        // Quick Action Grid
-                        _buildQuickActionGrid(homeProvider)
-                            .animate(controller: _animationController)
-                            .fadeIn(duration: 600.ms, delay: 700.ms)
-                            .slide(
-                                begin: Offset(0, 0.2),
-                                duration: 600.ms,
-                                delay: 700.ms),
-                        SizedBox(height: 24),
+                      // Quick Action Grid
+                      _buildQuickActionGrid(homeProvider)
+                          .animate(controller: _animationController)
+                          .fadeIn(duration: 600.ms, delay: 700.ms)
+                          .slide(
+                              begin: Offset(0, 0.2),
+                              duration: 600.ms,
+                              delay: 700.ms),
+                      SizedBox(height: 24),
 //==============================================================================
-                        // Loan Application or Status Section
-                        _buildLoanApplicationSection(homeProvider)
-                            .animate(controller: _animationController)
-                            .fadeIn(duration: 600.ms, delay: 800.ms)
-                            .slide(
-                                begin: Offset(0, 0.2),
-                                duration: 600.ms,
-                                delay: 800.ms),
+                      // Loan Application or Status Section
+                      _buildLoanApplicationSection(homeProvider)
+                          .animate(controller: _animationController)
+                          .fadeIn(duration: 600.ms, delay: 800.ms)
+                          .slide(
+                              begin: Offset(0, 0.2),
+                              duration: 600.ms,
+                              delay: 800.ms),
 
-                        SizedBox(height: 24),
-                      ],
-                    ),
+                      SizedBox(height: 24),
+                    ],
                   ),
                 ),
-              );
-            },
-          );
-        }),
+              ),
+            );
+          },
+        ),
+      );
+    });
+
+    // AppBar configuration
+    final homeAppBar = AppBar(
+      title: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          'ওয়ার্ল্ড ব্যাংক',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+        ),
       ),
+      centerTitle: true,
+      leading: Consumer<HomeProvider>(
+        builder: (context, provider, _) {
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: _buildProfileAvatar(provider),
+          );
+        },
+      ),
+      actions: [
+        // Real-time updates toggle
+        Consumer<HomeProvider>(
+          builder: (context, provider, _) {
+            return Tooltip(
+              message: provider.periodicUpdateEnabled
+                  ? 'রিয়েল-টাইম আপডেট বন্ধ করুন'
+                  : 'রিয়েল-টাইম আপডেট চালু করুন',
+              child: IconButton(
+                icon: Icon(
+                  provider.periodicUpdateEnabled
+                      ? Icons.sync
+                      : Icons.sync_disabled,
+                  color: Colors.white,
+                ),
+                onPressed: () {
+                  if (provider.periodicUpdateEnabled) {
+                    provider.stopPeriodicUpdates();
+                  } else {
+                    provider.startPeriodicUpdates();
+                  }
+                },
+              ),
+            );
+          },
+        ),
+        Consumer<HomeProvider>(
+          builder: (context, provider, _) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.notifications_outlined, color: Colors.white),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NotificationScreen(),
+                      ),
+                    );
+                  },
+                ),
+                if (provider.unreadNotifications > 0)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        provider.unreadNotifications > 9
+                            ? '9+'
+                            : provider.unreadNotifications.toString(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+      automaticallyImplyLeading: false,
+    );
+
+    // Return the responsive screen
+    return homeContent.asResponsiveScreen(
+      appBar: homeAppBar,
+      backgroundColor: AppTheme.backgroundLight,
     );
   }
 
@@ -277,92 +314,143 @@ class _HomeScreenState extends State<HomeScreen>
     return homeProvider.isLoading
         ? _buildShimmerBalanceCard()
         : DataCard(
-            title: 'Available Balance',
-            value: ValueListenableBuilder<bool>(
-              valueListenable: _isBalanceVisible,
-              builder: (context, isVisible, child) {
-                return GestureDetector(
-                  onTap: () {
-                    _isBalanceVisible.value = true;
-                    Future.delayed(Duration(seconds: 2), () {
-                      if (_isBalanceVisible.value) {
-                        _isBalanceVisible.value = false;
-                      }
-                    });
-                  },
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Stack(
-                      alignment: Alignment.centerLeft,
-                      children: [
-                        AnimatedOpacity(
-                          opacity: isVisible ? 1.0 : 0.0,
-                          duration: Duration(milliseconds: 400),
-                          child: Text(
-                            '₹ ${homeProvider.balance}',
+            title: 'উপলব্ধ ব্যালেন্স',
+            value: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (homeProvider.periodicUpdateEnabled)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4.0),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.sync,
+                            size: 10,
+                            color: Colors.green,
+                          ),
+                          SizedBox(width: 3),
+                          Text(
+                            'লাইভ আপডেট',
                             style: TextStyle(
-                              fontSize: 24,
+                              color: Colors.green,
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF2C3E50),
                             ),
                           ),
-                        ),
-                        AnimatedSlide(
-                          offset: isVisible ? Offset(2.0, 0.0) : Offset.zero,
-                          duration: Duration(milliseconds: 400),
-                          curve: Curves.easeInOut,
-                          child: AnimatedOpacity(
-                            opacity: isVisible ? 0.0 : 1.0,
-                            duration: Duration(milliseconds: 300),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.remove_red_eye_outlined,
-                                  color: Color(0xFF2C3E50).withOpacity(0.7),
-                                  size: 15,
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Tap to view balance',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                );
-              },
+                ValueListenableBuilder<bool>(
+                  valueListenable: _isBalanceVisible,
+                  builder: (context, isVisible, child) {
+                    return GestureDetector(
+                      onTap: () {
+                        _isBalanceVisible.value = true;
+                        Future.delayed(Duration(seconds: 2), () {
+                          if (_isBalanceVisible.value) {
+                            _isBalanceVisible.value = false;
+                          }
+                        });
+                      },
+                      child: Container(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.centerLeft,
+                          children: [
+                            AnimatedOpacity(
+                              opacity: isVisible ? 1.0 : 0.0,
+                              duration: Duration(milliseconds: 400),
+                              child: homeProvider.dataUpdated
+                                  ? _buildUpdatedBalanceText(
+                                      homeProvider.balance)
+                                  : Text(
+                                      '৳${homeProvider.balance}',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2C3E50),
+                                      ),
+                                    ),
+                            ),
+                            AnimatedSlide(
+                              offset:
+                                  isVisible ? Offset(2.0, 0.0) : Offset.zero,
+                              duration: Duration(milliseconds: 400),
+                              curve: Curves.easeInOut,
+                              child: AnimatedOpacity(
+                                opacity: isVisible ? 0.0 : 1.0,
+                                duration: Duration(milliseconds: 300),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.remove_red_eye_outlined,
+                                      color: Color(0xFF2C3E50).withOpacity(0.7),
+                                      size: 15,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'ব্যালেন্স দেখতে ট্যাপ করুন',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
             icon: Icons.account_balance_wallet,
             isGradient: true,
             hasGlow: true,
-            subtitle: 'Tap to view transactions',
-            trailing: IconButton(
-              icon: Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.white,
-                size: 16,
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => WithdrawScreen(),
+            subtitle: 'লেনদেন দেখতে ট্যাপ করুন',
+            trailing: Row(
+              children: [
+                Text(
+                  'উত্তোলন',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
                   ),
-                );
-              },
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => WithdrawScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
             onTap: () {
               Navigator.push(
@@ -400,7 +488,7 @@ class _HomeScreenState extends State<HomeScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Loan Status',
+                    'ঋণের অবস্থা',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -529,8 +617,8 @@ class _HomeScreenState extends State<HomeScreen>
             crossAxisSpacing: 16,
             children: [
               _buildQuickActionItem(
-                'Apply Loan',
-                'Get Financing',
+                'ঋণের আবেদন',
+                'ফাইন্যান্সিং পান',
                 Icons.monetization_on,
                 () {
                   if (homeProvider.userStatus == 1 &&
@@ -551,8 +639,8 @@ class _HomeScreenState extends State<HomeScreen>
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content:
-                            Text('You already have a pending or active loan'),
+                        content: Text(
+                            'আপনার ইতিমধ্যে একটি অপেক্ষারত বা সক্রিয় ঋণ রয়েছে'),
                         backgroundColor: AppTheme.textDark,
                       ),
                     );
@@ -562,8 +650,8 @@ class _HomeScreenState extends State<HomeScreen>
                 100,
               ),
               _buildQuickActionItem(
-                'Withdraw',
-                'Transfer Funds',
+                'উত্তোলন',
+                'অর্থ স্থানান্তর',
                 Icons.account_balance,
                 () {
                   Navigator.push(
@@ -577,8 +665,8 @@ class _HomeScreenState extends State<HomeScreen>
                 200,
               ),
               _buildQuickActionItem(
-                'My Info',
-                'Update Profile',
+                'আমার তথ্য',
+                'প্রোফাইল আপডেট',
                 Icons.person_outline,
                 () {
                   Navigator.push(
@@ -592,8 +680,8 @@ class _HomeScreenState extends State<HomeScreen>
                 300,
               ),
               _buildQuickActionItem(
-                'Support',
-                'Get Help',
+                'সহায়তা',
+                'সাহায্য পান',
                 Icons.headset_mic_outlined,
                 () {
                   // Navigate to support screen
@@ -692,9 +780,9 @@ class _HomeScreenState extends State<HomeScreen>
     switch (homeProvider.loanStatus.toString()) {
       case '0':
         if (homeProvider.userStatus == 0) {
-          title = 'Complete Your Profile';
-          message = 'Submit your personal information to apply for a loan';
-          buttonText = 'Personal Information';
+          title = 'আপনার প্রোফাইল সম্পূর্ণ করুন';
+          message = 'ঋণের জন্য আবেদন করতে আপনার ব্যক্তিগত তথ্য জমা দিন';
+          buttonText = 'ব্যক্তিগত তথ্য';
           onPressed = () {
             Navigator.push(
               context,
@@ -704,10 +792,10 @@ class _HomeScreenState extends State<HomeScreen>
             );
           };
         } else {
-          title = 'Ready for Financing';
+          title = 'অর্থায়নের জন্য প্রস্তুত';
           message =
-              'Your personal information has been verified. Apply for a loan now.';
-          buttonText = 'Apply For Loan';
+              'আপনার ব্যক্তিগত তথ্য যাচাই করা হয়েছে। এখন ঋণের জন্য আবেদন করুন।';
+          buttonText = 'ঋণের জন্য আবেদন করুন';
           onPressed = () {
             Navigator.push(
               context,
@@ -719,17 +807,17 @@ class _HomeScreenState extends State<HomeScreen>
         }
         break;
       case '1':
-        title = 'Application In Review';
+        title = 'আবেদন পর্যালোচনা চলছে';
         message =
-            'Your loan application is being processed. We will notify you once it\'s approved.';
+            'আপনার ঋণের আবেদন প্রক্রিয়াধীন আছে। অনুমোদিত হলে আমরা আপনাকে অবহিত করব।';
         buttonText = null;
         onPressed = null;
         break;
       case '2':
-        title = 'Loan Approved';
+        title = 'ঋণ অনুমোদিত';
         message =
-            'Congratulations! Your loan has been approved. You can withdraw the funds now.';
-        buttonText = 'Withdraw Funds';
+            'অভিনন্দন! আপনার ঋণ অনুমোদিত হয়েছে। আপনি এখন অর্থ উত্তোলন করতে পারেন।';
+        buttonText = 'অর্থ উত্তোলন করুন';
         onPressed = () {
           Navigator.push(
             context,
@@ -740,105 +828,67 @@ class _HomeScreenState extends State<HomeScreen>
         };
         break;
       case '3':
-        title = 'Active Loan';
+        title = 'সক্রিয় ঋণ';
         message =
-            'You currently have an active loan. Make timely repayments to maintain a good credit score.';
+            'আপনার বর্তমানে একটি সক্রিয় ঋণ আছে। একটি ভালো ক্রেডিট স্কোর বজায় রাখতে সময়মত পরিশোধ করুন।';
         buttonText = null;
         onPressed = null;
         break;
       default:
-        title = 'Unknown Status';
-        message = 'There was an error determining your loan status.';
+        title = 'অজানা অবস্থা';
+        message = 'আপনার ঋণের অবস্থা নির্ধারণে একটি ত্রুটি হয়েছে।';
         buttonText = null;
         onPressed = null;
     }
 
-    return homeProvider.isLoading
-        ? _buildShimmerLoanSection()
-        : Container(
-            padding: EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  offset: Offset(0, 4),
-                  blurRadius: 12,
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.authorityBlue.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        _getLoanStatusIcon(homeProvider),
-                        color: AppTheme.authorityBlue,
-                      ),
-                    ),
-                    SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.only(left: 52.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        message,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      if (buttonText != null && onPressed != null)
-                        CustomButton(
-                          text: buttonText,
-                          onPressed: onPressed,
-                          width: double.infinity,
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-  }
-
-  IconData _getLoanStatusIcon(HomeProvider homeProvider) {
-    switch (homeProvider.loanStatus.toString()) {
-      case '0':
-        return homeProvider.userStatus == 0
-            ? Icons.person_outline
-            : Icons.credit_card;
-      case '1':
-        return Icons.access_time;
-      case '2':
-        return Icons.check_circle_outline;
-      case '3':
-        return Icons.payments_outlined;
-      default:
-        return Icons.error_outline;
+    if (homeProvider.isLoading) {
+      return _buildShimmerLoanSection();
     }
+
+    return Container(
+      padding: EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            offset: Offset(0, 4),
+            blurRadius: 12,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: AppTheme.authorityBlue,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 12),
+          Text(
+            message,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 16),
+          if (buttonText != null && onPressed != null)
+            CustomButton(
+              text: buttonText,
+              onPressed: onPressed,
+              width: double.infinity,
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _buildShimmerLoanSection() {
@@ -873,7 +923,7 @@ class _HomeScreenState extends State<HomeScreen>
         borderRadius: BorderRadius.circular(20),
         child: hasProfilePic
             ? Image.network(
-                "${baseUrl}${homeProvider.profilePicUrl!}",
+                "$baseUrl${homeProvider.profilePicUrl!}",
                 width: 40,
                 height: 40,
                 fit: BoxFit.cover,
@@ -917,6 +967,52 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ),
       ),
+    );
+  }
+
+  Widget _buildUpdatedBalanceText(String balance) {
+    // Schedule resetting the dataUpdated flag after animation completes
+    Future.delayed(Duration(milliseconds: 1000), () {
+      if (mounted) {
+        context.read<HomeProvider>().resetDataUpdatedFlag();
+      }
+    });
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '₹ $balance',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2C3E50),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: Container(
+            padding: const EdgeInsets.all(4.0),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.refresh,
+              color: Colors.green,
+              size: 16,
+            ),
+          )
+              .animate()
+              .fadeIn()
+              .then()
+              .rotate(duration: 500.ms)
+              .then()
+              .scaleXY(begin: 1.0, end: 0.8, duration: 300.ms)
+              .then()
+              .scaleXY(begin: 0.8, end: 1.0, duration: 300.ms),
+        ),
+      ],
     );
   }
 }

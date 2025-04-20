@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:world_bank_loan/screens/home_section/home_page.dart';
+import 'package:world_bank_loan/bottom_navigation/MainNavigationScreen.dart';
+
 import 'dart:convert';
 import '../../auth/saved_login/user_session.dart';
 import '../../slider/home_screen_slider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/responsive_screen.dart';
 import '../../core/api/api_endpoints.dart';
 
 class LoanApplicationScreen extends StatefulWidget {
@@ -128,8 +130,8 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen>
           content: Text('Loan application submitted successfully'),
           backgroundColor: Colors.green,
         ));
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (context) => HomeScreen()));
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (context) => MainNavigationScreen()));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Failed to submit loan application'),
@@ -151,610 +153,614 @@ class _LoanApplicationScreenState extends State<LoanApplicationScreen>
     // Get screen size for responsiveness
     final screenSize = MediaQuery.of(context).size;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Loan Application',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        backgroundColor: AppTheme.authorityBlue,
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: IconThemeData(color: Colors.white),
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          statusBarBrightness: Brightness.dark,
-        ),
+    // Build application app bar
+    final loanAppBar = AppBar(
+      title: Text(
+        'ঋণের আবেদন',
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
       ),
-      body: Stack(
-        children: [
-          // Gradient background
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppTheme.authorityBlue,
-                  AppTheme.trustCyan,
-                  AppTheme.backgroundLight,
-                ],
-                stops: [0.0, 0.2, 0.4],
-              ),
+      backgroundColor: AppTheme.authorityBlue,
+      elevation: 0,
+      centerTitle: true,
+      iconTheme: IconThemeData(color: Colors.white),
+      systemOverlayStyle: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+    );
+
+    // Build application content
+    final loanContent = Stack(
+      children: [
+        // Gradient background
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppTheme.authorityBlue,
+                AppTheme.trustCyan,
+                AppTheme.backgroundLight,
+              ],
+              stops: [0.0, 0.2, 0.4],
             ),
           ),
+        ),
 
-          isLoading
-              ? Center(
-                  child: Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 10,
-                          offset: Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                              AppTheme.authorityBlue),
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          'Processing your application...',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                        ),
-                      ],
-                    ),
+        isLoading
+            ? Center(
+                child: Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
                   ),
-                )
-              : AnimatedBuilder(
-                  animation: _animationController,
-                  builder: (context, child) {
-                    return FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: SlideTransition(
-                        position: _slideAnimation,
-                        child: SingleChildScrollView(
-                          physics: BouncingScrollPhysics(),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // Banner slider
-                              Container(
-                                height: screenSize.height * 0.22,
-                                child: HomeBannerSlider(),
-                              ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            AppTheme.authorityBlue),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'আপনার আবেদন প্রক্রিয়া করা হচ্ছে...',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: SlideTransition(
+                      position: _slideAnimation,
+                      child: SingleChildScrollView(
+                        physics: BouncingScrollPhysics(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Banner slider
+                            SizedBox(
+                              height: screenSize.height * 0.22,
+                              child: HomeBannerSlider(),
+                            ),
 
-                              // Loan Details Card
-                              Container(
-                                margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                padding: EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 10,
-                                      spreadRadius: 1,
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Loan Details",
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: AppTheme.authorityBlue,
-                                            fontSize: 15,
+                            // Loan Details Card
+                            Container(
+                              margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              padding: EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 10,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "ঋণের বিবরণ",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.authorityBlue,
+                                          fontSize: 15,
+                                        ),
+                                  ),
+                                  SizedBox(height: 12),
+                                  // New row containing total amount paid and total installments
+                                  Row(
+                                    children: [
+                                      // Total Amount Paid
+                                      Expanded(
+                                        child: Container(
+                                          padding: EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: Colors.grey.shade200,
+                                              width: 1,
+                                            ),
                                           ),
-                                    ),
-                                    SizedBox(height: 12),
-                                    // New row containing total amount paid and total installments
-                                    Row(
-                                      children: [
-                                        // Total Amount Paid
-                                        Expanded(
-                                          child: Container(
-                                            padding: EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              border: Border.all(
-                                                color: Colors.grey.shade200,
-                                                width: 1,
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    padding: EdgeInsets.all(6),
+                                                    decoration: BoxDecoration(
+                                                      color: AppTheme
+                                                          .authorityBlue
+                                                          .withOpacity(0.1),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              6),
+                                                    ),
+                                                    child: Icon(
+                                                      Icons
+                                                          .account_balance_wallet,
+                                                      color: AppTheme
+                                                          .authorityBlue,
+                                                      size: 14,
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: 6),
+                                                  Text(
+                                                    "মোট পরিশোধ",
+                                                    style: TextStyle(
+                                                      fontSize: 8,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.black,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              SizedBox(height: 8),
+                                              Text(
+                                                selectedLoanAmount > 0
+                                                    ? (selectedLoanAmount +
+                                                            (selectedLoanAmount *
+                                                                interestRate /
+                                                                100 *
+                                                                selectedLoanTerm /
+                                                                12))
+                                                        .toStringAsFixed(0)
+                                                    : '0',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(width: 12),
+                                      // Total Installments
+                                      Expanded(
+                                        child: Container(
+                                          padding: EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: Colors.grey.shade200,
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    padding: EdgeInsets.all(6),
+                                                    decoration: BoxDecoration(
+                                                      color: AppTheme.trustCyan
+                                                          .withOpacity(0.1),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              6),
+                                                    ),
+                                                    child: Icon(
+                                                      Icons
+                                                          .calendar_month_outlined,
+                                                      color: AppTheme.trustCyan,
+                                                      size: 14,
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: 6),
+                                                  Text(
+                                                    "কিস্তি",
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.black,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              SizedBox(height: 8),
+                                              Text(
+                                                "$selectedLoanTerm মাস",
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 10),
+                                  // Monthly payment overview
+                                  if (selectedLoanAmount > 0)
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.info_outline,
+                                            color: Colors.grey.shade600,
+                                            size: 14,
+                                          ),
+                                          SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              "আপনার মাসিক পরিশোধ হবে ${calculateInstallment(selectedLoanAmount, selectedLoanTerm).toStringAsFixed(0)} টাকা $selectedLoanTerm মাসের জন্য",
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey.shade700,
                                               ),
                                             ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Container(
-                                                      padding:
-                                                          EdgeInsets.all(6),
-                                                      decoration: BoxDecoration(
-                                                        color: AppTheme
-                                                            .authorityBlue
-                                                            .withOpacity(0.1),
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(6),
-                                                      ),
-                                                      child: Icon(
-                                                        Icons
-                                                            .account_balance_wallet,
-                                                        color: AppTheme
-                                                            .authorityBlue,
-                                                        size: 14,
-                                                      ),
-                                                    ),
-                                                    SizedBox(width: 6),
-                                                    Text(
-                                                      "Total Repayment",
-                                                      style: TextStyle(
-                                                        fontSize: 8,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Colors.black,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                SizedBox(height: 8),
-                                                Text(
-                                                  "${selectedLoanAmount > 0 ? (selectedLoanAmount + (selectedLoanAmount * interestRate / 100 * selectedLoanTerm / 12)).toStringAsFixed(0) : '0'}",
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Colors.black87,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+
+                            // Select Loan Term
+                            Container(
+                              margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "ঋণের মেয়াদ নির্বাচন করুন",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.authorityBlue,
+                                        ),
+                                  ),
+                                  SizedBox(height: 12),
+                                  // Term selection grid - two rows with three tiles
+                                  GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: NeverScrollableScrollPhysics(),
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      childAspectRatio: 1.2,
+                                      crossAxisSpacing: 10,
+                                      mainAxisSpacing: 10,
+                                    ),
+                                    itemCount: loanTerms.length,
+                                    itemBuilder: (context, index) {
+                                      bool isSelected =
+                                          selectedLoanTerm == loanTerms[index];
+                                      return GestureDetector(
+                                        onTap: () => setState(() {
+                                          selectedLoanTerm = loanTerms[index];
+                                          selectedLoanAmount = 0;
+                                        }),
+                                        child: TermSelectionCard(
+                                          term: loanTerms[index],
+                                          isSelected: isSelected,
+                                          animationController:
+                                              _animationController,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Select Loan Amount
+                            Container(
+                              margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              padding: EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 10,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "ঋণের পরিমাণ নির্বাচন করুন",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.authorityBlue,
+                                        ),
+                                  ),
+                                  SizedBox(height: 12),
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics: NeverScrollableScrollPhysics(),
+                                    itemCount: loanAmounts.length,
+                                    itemBuilder: (context, index) {
+                                      double installment = calculateInstallment(
+                                          loanAmounts[index], selectedLoanTerm);
+                                      bool isSelected = selectedLoanAmount ==
+                                          loanAmounts[index];
+
+                                      return GestureDetector(
+                                        onTap: () => setState(() {
+                                          selectedLoanAmount =
+                                              loanAmounts[index];
+                                        }),
+                                        child: AmountSelectionCard(
+                                          amount: loanAmounts[index],
+                                          installment: installment,
+                                          isSelected: isSelected,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Loan Information Section
+                            Container(
+                              margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              padding: EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppTheme.neutral200,
+                                  width: 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.03),
+                                    blurRadius: 8,
+                                    spreadRadius: 0,
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "ঋণের তথ্য",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.authorityBlue,
+                                        ),
+                                  ),
+                                  SizedBox(height: 12),
+
+                                  // Interest Rate Info
+                                  Container(
+                                    margin: EdgeInsets.only(bottom: 12),
+                                    padding: EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.backgroundLight,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.trustCyan
+                                                .withOpacity(0.2),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.percent_rounded,
+                                            color: AppTheme.authorityBlue,
+                                            size: 20,
                                           ),
                                         ),
                                         SizedBox(width: 12),
-                                        // Total Installments
                                         Expanded(
-                                          child: Container(
-                                            padding: EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              border: Border.all(
-                                                color: Colors.grey.shade200,
-                                                width: 1,
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "সুদের হার",
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color:
+                                                          AppTheme.neutral800,
+                                                    ),
                                               ),
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Container(
-                                                      padding:
-                                                          EdgeInsets.all(6),
-                                                      decoration: BoxDecoration(
-                                                        color: AppTheme
-                                                            .trustCyan
-                                                            .withOpacity(0.1),
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(6),
-                                                      ),
-                                                      child: Icon(
-                                                        Icons
-                                                            .calendar_month_outlined,
-                                                        color:
-                                                            AppTheme.trustCyan,
-                                                        size: 14,
-                                                      ),
+                                              SizedBox(height: 2),
+                                              Text(
+                                                "$interestRate% বার্ষিক (নির্ধারিত)",
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color:
+                                                          AppTheme.neutral700,
                                                     ),
-                                                    SizedBox(width: 6),
-                                                    Text(
-                                                      "Installments",
-                                                      style: TextStyle(
-                                                        fontSize: 9,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Colors.black,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                SizedBox(height: 8),
-                                                Text(
-                                                  "${selectedLoanTerm} months",
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Colors.black87,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ],
                                     ),
-                                    SizedBox(height: 10),
-                                    // Monthly payment overview
-                                    if (selectedLoanAmount > 0)
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade50,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
+                                  ),
+
+                                  // Processing Time Info
+                                  Container(
+                                    padding: EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.backgroundLight,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.success
+                                                .withOpacity(0.2),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.access_time_filled_rounded,
+                                            color: AppTheme.success,
+                                            size: 20,
+                                          ),
                                         ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.info_outline,
-                                              color: Colors.grey.shade600,
-                                              size: 14,
-                                            ),
-                                            SizedBox(width: 6),
-                                            Expanded(
-                                              child: Text(
-                                                "Your monthly payment will be ${calculateInstallment(selectedLoanAmount, selectedLoanTerm).toStringAsFixed(0)} for ${selectedLoanTerm} months",
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: Colors.grey.shade700,
-                                                ),
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "দ্রুত প্রক্রিয়াকরণ",
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color:
+                                                          AppTheme.neutral800,
+                                                    ),
                                               ),
-                                            ),
-                                          ],
+                                              SizedBox(height: 2),
+                                              Text(
+                                                "আবেদনগুলি সাধারণত ২৪ ঘন্টার মধ্যে অনুমোদিত হয়",
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color:
+                                                          AppTheme.neutral700,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                  ],
-                                ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
+                            ),
 
-                              // Select Loan Term
-                              Container(
-                                margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                            // Submit Application Button
+                            Container(
+                              margin: EdgeInsets.all(16),
+                              child: ElevatedButton(
+                                onPressed: selectedLoanAmount > 0
+                                    ? submitLoanApplication
+                                    : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.authorityBlue,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  elevation: 5,
+                                  shadowColor: selectedLoanAmount > 0
+                                      ? AppTheme.authorityBlue.withOpacity(0.4)
+                                      : Colors.transparent,
+                                  disabledBackgroundColor: AppTheme.neutral300,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
+                                    Icon(
+                                      Icons.send_rounded,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                    SizedBox(width: 12),
                                     Text(
-                                      "Select Loan Term",
+                                      'আবেদন জমা দিন',
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleMedium
                                           ?.copyWith(
+                                            color: Colors.white,
                                             fontWeight: FontWeight.bold,
-                                            color: AppTheme.authorityBlue,
                                           ),
-                                    ),
-                                    SizedBox(height: 12),
-                                    // Term selection grid - two rows with three tiles
-                                    GridView.builder(
-                                      shrinkWrap: true,
-                                      physics: NeverScrollableScrollPhysics(),
-                                      gridDelegate:
-                                          SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 3,
-                                        childAspectRatio: 1.2,
-                                        crossAxisSpacing: 10,
-                                        mainAxisSpacing: 10,
-                                      ),
-                                      itemCount: loanTerms.length,
-                                      itemBuilder: (context, index) {
-                                        bool isSelected = selectedLoanTerm ==
-                                            loanTerms[index];
-                                        return GestureDetector(
-                                          onTap: () => setState(() {
-                                            selectedLoanTerm = loanTerms[index];
-                                            selectedLoanAmount = 0;
-                                          }),
-                                          child: TermSelectionCard(
-                                            term: loanTerms[index],
-                                            isSelected: isSelected,
-                                            animationController:
-                                                _animationController,
-                                          ),
-                                        );
-                                      },
                                     ),
                                   ],
                                 ),
                               ),
+                            ),
 
-                              // Select Loan Amount
-                              Container(
-                                margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                padding: EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 10,
-                                      spreadRadius: 1,
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Select Loan Amount",
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: AppTheme.authorityBlue,
-                                          ),
-                                    ),
-                                    SizedBox(height: 12),
-                                    ListView.builder(
-                                      shrinkWrap: true,
-                                      physics: NeverScrollableScrollPhysics(),
-                                      itemCount: loanAmounts.length,
-                                      itemBuilder: (context, index) {
-                                        double installment =
-                                            calculateInstallment(
-                                                loanAmounts[index],
-                                                selectedLoanTerm);
-                                        bool isSelected = selectedLoanAmount ==
-                                            loanAmounts[index];
-
-                                        return GestureDetector(
-                                          onTap: () => setState(() {
-                                            selectedLoanAmount =
-                                                loanAmounts[index];
-                                          }),
-                                          child: AmountSelectionCard(
-                                            amount: loanAmounts[index],
-                                            installment: installment,
-                                            isSelected: isSelected,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              // Loan Information Section
-                              Container(
-                                margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                padding: EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: AppTheme.neutral200,
-                                    width: 1,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.03),
-                                      blurRadius: 8,
-                                      spreadRadius: 0,
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Loan Information",
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: AppTheme.authorityBlue,
-                                          ),
-                                    ),
-                                    SizedBox(height: 12),
-
-                                    // Interest Rate Info
-                                    Container(
-                                      margin: EdgeInsets.only(bottom: 12),
-                                      padding: EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.backgroundLight,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            padding: EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              color: AppTheme.trustCyan
-                                                  .withOpacity(0.2),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Icons.percent_rounded,
-                                              color: AppTheme.authorityBlue,
-                                              size: 20,
-                                            ),
-                                          ),
-                                          SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  "Interest Rate",
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodyMedium
-                                                      ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color:
-                                                            AppTheme.neutral800,
-                                                      ),
-                                                ),
-                                                SizedBox(height: 2),
-                                                Text(
-                                                  "${interestRate}% per annum (fixed)",
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.copyWith(
-                                                        color:
-                                                            AppTheme.neutral700,
-                                                      ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-
-                                    // Processing Time Info
-                                    Container(
-                                      padding: EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.backgroundLight,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            padding: EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              color: AppTheme.success
-                                                  .withOpacity(0.2),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Icons.access_time_filled_rounded,
-                                              color: AppTheme.success,
-                                              size: 20,
-                                            ),
-                                          ),
-                                          SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  "Fast Processing",
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodyMedium
-                                                      ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color:
-                                                            AppTheme.neutral800,
-                                                      ),
-                                                ),
-                                                SizedBox(height: 2),
-                                                Text(
-                                                  "Applications are typically approved within 24 hours",
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.copyWith(
-                                                        color:
-                                                            AppTheme.neutral700,
-                                                      ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              // Submit Application Button
-                              Container(
-                                margin: EdgeInsets.all(16),
-                                child: ElevatedButton(
-                                  onPressed: selectedLoanAmount > 0
-                                      ? submitLoanApplication
-                                      : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.authorityBlue,
-                                    foregroundColor: Colors.white,
-                                    padding: EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    elevation: 5,
-                                    shadowColor: selectedLoanAmount > 0
-                                        ? AppTheme.authorityBlue
-                                            .withOpacity(0.4)
-                                        : Colors.transparent,
-                                    disabledBackgroundColor:
-                                        AppTheme.neutral300,
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.send_rounded,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                      SizedBox(width: 12),
-                                      Text(
-                                        'Submit Application',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium
-                                            ?.copyWith(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-
-                              SizedBox(height: 16),
-                            ],
-                          ),
+                            SizedBox(height: 16),
+                          ],
                         ),
                       ),
-                    );
-                  },
-                ),
-        ],
-      ),
+                    ),
+                  );
+                },
+              ),
+      ],
+    );
+
+    // Apply responsive wrapper
+    return loanContent.asResponsiveScreen(
+      appBar: loanAppBar,
     );
   }
 }
@@ -765,11 +771,11 @@ class TermSelectionCard extends StatefulWidget {
   final AnimationController animationController;
 
   const TermSelectionCard({
-    Key? key,
+    super.key,
     required this.term,
     required this.isSelected,
     required this.animationController,
-  }) : super(key: key);
+  });
 
   @override
   _TermSelectionCardState createState() => _TermSelectionCardState();
@@ -871,7 +877,7 @@ class _TermSelectionCardState extends State<TermSelectionCard>
                 ),
                 SizedBox(height: 4),
                 Text(
-                  "months",
+                  "মাস",
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: widget.isSelected
                             ? Colors.white70
@@ -893,11 +899,11 @@ class AmountSelectionCard extends StatefulWidget {
   final bool isSelected;
 
   const AmountSelectionCard({
-    Key? key,
+    super.key,
     required this.amount,
     required this.installment,
     required this.isSelected,
-  }) : super(key: key);
+  });
 
   @override
   _AmountSelectionCardState createState() => _AmountSelectionCardState();
@@ -1042,7 +1048,7 @@ class _AmountSelectionCardState extends State<AmountSelectionCard>
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    'Monthly Installment',
+                    'মাসিক কিস্তি',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontSize: labelFontSize,
                           color: widget.isSelected
@@ -1051,7 +1057,7 @@ class _AmountSelectionCardState extends State<AmountSelectionCard>
                         ),
                   ),
                   Text(
-                    '${widget.installment.toStringAsFixed(0)}',
+                    widget.installment.toStringAsFixed(0),
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           fontSize: installmentFontSize,
                           fontWeight: FontWeight.bold,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async'; // Add timer import
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/saved_login/user_session.dart';
 import 'package:world_bank_loan/core/api/api_endpoints.dart';
@@ -20,6 +21,13 @@ class HomeProvider extends ChangeNotifier {
   int _totalNotifications = 0;
   String? _profilePicUrl;
 
+  // Timer for periodic updates
+  Timer? _updateTimer;
+  bool _periodicUpdateEnabled = false;
+  DateTime _lastApiCallTime = DateTime.now();
+  DateTime _lastUpdatedTime = DateTime.now();
+  bool _dataUpdated = false;
+
   // Getters
   HomeLoadingStatus get loadingStatus => _loadingStatus;
   String get balance => _balance;
@@ -29,6 +37,9 @@ class HomeProvider extends ChangeNotifier {
   String get errorMessage => _errorMessage;
   bool get isLoading => _loadingStatus == HomeLoadingStatus.loading;
   bool get hasError => _loadingStatus == HomeLoadingStatus.error;
+  bool get periodicUpdateEnabled => _periodicUpdateEnabled;
+  DateTime get lastUpdatedTime => _lastUpdatedTime;
+  bool get dataUpdated => _dataUpdated;
 
   // Add getters for new fields
   int get unreadNotifications => _unreadNotifications;
@@ -71,6 +82,31 @@ class HomeProvider extends ChangeNotifier {
   Future<void> initialize() async {
     await _loadStoredUserData();
     await fetchUserData();
+  }
+
+  // Start periodic updates
+  void startPeriodicUpdates() {
+    if (_updateTimer != null) {
+      _updateTimer!.cancel();
+    }
+
+    _periodicUpdateEnabled = true;
+    _updateTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      fetchUserData(isPeriodicUpdate: true);
+    });
+
+    notifyListeners();
+  }
+
+  // Stop periodic updates
+  void stopPeriodicUpdates() {
+    if (_updateTimer != null) {
+      _updateTimer!.cancel();
+      _updateTimer = null;
+    }
+
+    _periodicUpdateEnabled = false;
+    notifyListeners();
   }
 
   // Save user data to SharedPreferences
@@ -123,14 +159,33 @@ class HomeProvider extends ChangeNotifier {
   }
 
   // Fetch user data from API
-  Future<void> fetchUserData() async {
-    if (_loadingStatus == HomeLoadingStatus.loading) return;
+  Future<void> fetchUserData({bool isPeriodicUpdate = false}) async {
+    // For periodic updates, check if enough time has passed since last API call
+    if (isPeriodicUpdate) {
+      final now = DateTime.now();
+      final timeSinceLastCall = now.difference(_lastApiCallTime);
 
-    _loadingStatus = HomeLoadingStatus.loading;
-    _errorMessage = '';
-    notifyListeners();
+      // Don't make API calls more frequently than once per second
+      if (timeSinceLastCall.inMilliseconds < 1000) {
+        return;
+      }
+    }
+
+    // For periodic updates, don't show loading state or block if already loading
+    if (!isPeriodicUpdate) {
+      if (_loadingStatus == HomeLoadingStatus.loading) return;
+      _loadingStatus = HomeLoadingStatus.loading;
+      _errorMessage = '';
+      notifyListeners();
+    } else if (_loadingStatus == HomeLoadingStatus.loading) {
+      // Don't stack API calls for periodic updates
+      return;
+    }
 
     try {
+      // Update the last API call time
+      _lastApiCallTime = DateTime.now();
+
       String? token = await UserSession.getToken();
       if (token == null) {
         _setError('User not authenticated');
@@ -175,10 +230,20 @@ class HomeProvider extends ChangeNotifier {
             _totalNotifications = newTotalNotifications;
             _profilePicUrl = newProfilePicUrl;
 
+            // Set the update flags
+            _lastUpdatedTime = DateTime.now();
+            _dataUpdated = true;
+
             await _saveUserData();
+            notifyListeners(); // Only notify listeners if data changed
           }
 
           _loadingStatus = HomeLoadingStatus.loaded;
+
+          // Only notify if not already notified from data change and it's not a periodic update
+          if (!isPeriodicUpdate) {
+            notifyListeners();
+          }
         } catch (e) {
           _setError('Failed to parse data: $e');
         }
@@ -188,14 +253,19 @@ class HomeProvider extends ChangeNotifier {
         _setError('Server error: ${response.statusCode}');
       }
     } catch (e) {
-      _setError('Connection error: $e');
+      if (!isPeriodicUpdate) {
+        _setError('Connection error: $e');
+      }
     }
 
-    notifyListeners();
+    if (!isPeriodicUpdate) {
+      notifyListeners();
+    }
   }
 
   // Reset data
   void reset() {
+    stopPeriodicUpdates(); // Stop any active timer
     _loadingStatus = HomeLoadingStatus.initial;
     _balance = "0";
     _name = "No Name";
@@ -247,5 +317,19 @@ class HomeProvider extends ChangeNotifier {
       _saveUserData();
       notifyListeners();
     }
+  }
+
+  // Reset the dataUpdated flag
+  void resetDataUpdatedFlag() {
+    if (_dataUpdated) {
+      _dataUpdated = false;
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    stopPeriodicUpdates(); // Make sure to clean up the timer
+    super.dispose();
   }
 }
