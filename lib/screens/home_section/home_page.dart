@@ -13,6 +13,8 @@ import 'package:world_bank_loan/screens/personal_information/personal_informatio
 import 'package:world_bank_loan/slider/home_screen_slider.dart';
 import 'package:world_bank_loan/screens/help_section/help_screen.dart';
 import 'package:world_bank_loan/screens/notifications/notification_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:world_bank_loan/core/routes/app_routes.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _animationController;
   late ScrollController _scrollController;
   final ValueNotifier<bool> _isBalanceVisible = ValueNotifier<bool>(false);
+  bool _isInitializing = true; // Track initialization state
 
   @override
   void initState() {
@@ -37,12 +40,31 @@ class _HomeScreenState extends State<HomeScreen>
     _scrollController = ScrollController();
 
     // Use Future.microtask to ensure the context is ready for Provider
-    Future.microtask(() {
+    Future.microtask(() async {
       final provider = context.read<HomeProvider>();
-      provider.initialize();
+
+      // Initialize and restore last screen
+      await provider.initialize();
+
+      // Check if there's a saved route to navigate to
+      final lastRoute = await _getLastRoute();
+      if (lastRoute != null && lastRoute.isNotEmpty && mounted) {
+        // Don't navigate to home if we're already there
+        if (lastRoute != AppRoutes.home && lastRoute != AppRoutes.main) {
+          // Navigate to the last screen after initialization
+          Navigator.of(context).pushReplacementNamed(lastRoute);
+        }
+      }
 
       // Start periodic updates when screen initializes
       provider.startPeriodicUpdates();
+
+      // Set initialization complete
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
     });
   }
 
@@ -66,6 +88,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Show loading indicator while initializing
+    if (_isInitializing) {
+      return _buildLoadingScreen();
+    }
+
     // Build the content of the home screen
     final homeContent =
         Consumer<HomeProvider>(builder: (context, homeProvider, _) {
@@ -259,14 +286,7 @@ class _HomeScreenState extends State<HomeScreen>
               children: [
                 IconButton(
                   icon: Icon(Icons.notifications_outlined, color: Colors.white),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const NotificationScreen(),
-                      ),
-                    );
-                  },
+                  onPressed: _navigateToNotifications,
                 ),
                 if (provider.unreadNotifications > 0)
                   Positioned(
@@ -441,25 +461,11 @@ class _HomeScreenState extends State<HomeScreen>
                     color: Colors.white,
                     size: 16,
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => WithdrawScreen(),
-                      ),
-                    );
-                  },
+                  onPressed: _navigateToWithdraw,
                 ),
               ],
             ),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WithdrawScreen(),
-                ),
-              );
-            },
+            onTap: _navigateToWithdraw,
           );
   }
 
@@ -623,19 +629,9 @@ class _HomeScreenState extends State<HomeScreen>
                 () {
                   if (homeProvider.userStatus == 1 &&
                       homeProvider.loanStatus == 0) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => LoanApplicationScreen(),
-                      ),
-                    );
+                    _navigateToLoanApplication();
                   } else if (homeProvider.userStatus == 0) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PersonalInfoScreen(),
-                      ),
-                    );
+                    _navigateToPersonalInfo();
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -653,14 +649,7 @@ class _HomeScreenState extends State<HomeScreen>
                 'উত্তোলন',
                 'অর্থ স্থানান্তর',
                 Icons.account_balance,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => WithdrawScreen(),
-                    ),
-                  );
-                },
+                _navigateToWithdraw,
                 0.2,
                 200,
               ),
@@ -668,14 +657,7 @@ class _HomeScreenState extends State<HomeScreen>
                 'আমার তথ্য',
                 'প্রোফাইল আপডেট',
                 Icons.person_outline,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PersonalInfoScreen(),
-                    ),
-                  );
-                },
+                _navigateToPersonalInfo,
                 -0.2,
                 300,
               ),
@@ -683,15 +665,7 @@ class _HomeScreenState extends State<HomeScreen>
                 'সহায়তা',
                 'সাহায্য পান',
                 Icons.headset_mic_outlined,
-                () {
-                  // Navigate to support screen
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ContactScreen(),
-                    ),
-                  );
-                },
+                _navigateToContact,
                 0.2,
                 400,
               ),
@@ -783,27 +757,13 @@ class _HomeScreenState extends State<HomeScreen>
           title = 'আপনার প্রোফাইল সম্পূর্ণ করুন';
           message = 'ঋণের জন্য আবেদন করতে আপনার ব্যক্তিগত তথ্য জমা দিন';
           buttonText = 'ব্যক্তিগত তথ্য';
-          onPressed = () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PersonalInfoScreen(),
-              ),
-            );
-          };
+          onPressed = _navigateToPersonalInfo;
         } else {
           title = 'অর্থায়নের জন্য প্রস্তুত';
           message =
               'আপনার ব্যক্তিগত তথ্য যাচাই করা হয়েছে। এখন ঋণের জন্য আবেদন করুন।';
           buttonText = 'ঋণের জন্য আবেদন করুন';
-          onPressed = () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => LoanApplicationScreen(),
-              ),
-            );
-          };
+          onPressed = _navigateToLoanApplication;
         }
         break;
       case '1':
@@ -818,14 +778,7 @@ class _HomeScreenState extends State<HomeScreen>
         message =
             'অভিনন্দন! আপনার ঋণ অনুমোদিত হয়েছে। আপনি এখন অর্থ উত্তোলন করতে পারেন।';
         buttonText = 'অর্থ উত্তোলন করুন';
-        onPressed = () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => WithdrawScreen(),
-            ),
-          );
-        };
+        onPressed = _navigateToWithdraw;
         break;
       case '3':
         title = 'সক্রিয় ঋণ';
@@ -1014,5 +967,101 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ],
     );
+  }
+
+  // Save the current route when navigating
+  void _saveCurrentRoute(String route) async {
+    // Don't save landing or splash routes
+    if (route == AppRoutes.landing || route == AppRoutes.splash) {
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('last_route', route);
+  }
+
+  // Get the last saved route
+  Future<String?> _getLastRoute() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('last_route');
+  }
+
+  // Add loading screen widget
+  Widget _buildLoadingScreen() {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundLight,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // App logo or icon
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: AppTheme.authorityBlue,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.account_balance,
+                color: Colors.white,
+                size: 50,
+              ),
+            ),
+            SizedBox(height: 24),
+            Text(
+              'ওয়ার্ল্ড ব্যাংক',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.authorityBlue,
+              ),
+            ),
+            SizedBox(height: 32),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.authorityBlue),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'আপনার শেষ স্ক্রিন লোড হচ্ছে...',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Modified navigation method for PersonalInfoScreen
+  void _navigateToPersonalInfo() {
+    _saveCurrentRoute(AppRoutes.personalInfo);
+    Navigator.pushNamed(context, AppRoutes.personalInfo);
+  }
+
+  // Modified navigation method for LoanApplicationScreen
+  void _navigateToLoanApplication() {
+    _saveCurrentRoute(AppRoutes.loanApplication);
+    Navigator.pushNamed(context, AppRoutes.loanApplication);
+  }
+
+  // Modified navigation method for WithdrawScreen
+  void _navigateToWithdraw() {
+    _saveCurrentRoute(AppRoutes.withdraw);
+    Navigator.pushNamed(context, AppRoutes.withdraw);
+  }
+
+  // Modified navigation method for ContactScreen
+  void _navigateToContact() {
+    _saveCurrentRoute(AppRoutes.contact);
+    Navigator.pushNamed(context, AppRoutes.contact);
+  }
+
+  // Modified navigation method for NotificationScreen
+  void _navigateToNotifications() {
+    _saveCurrentRoute(AppRoutes.notifications);
+    Navigator.pushNamed(context, AppRoutes.notifications);
   }
 }

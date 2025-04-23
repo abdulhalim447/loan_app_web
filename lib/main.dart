@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:world_bank_loan/core/routes/app_routes.dart';
 import 'package:world_bank_loan/core/theme/app_theme.dart';
 import 'package:world_bank_loan/landing_page.dart';
 // Import needed only if we use AppProviders
@@ -93,6 +95,7 @@ class _MyAppState extends State<MyApp> {
   // Authentication status
   bool? _isAuthenticated;
   bool _isLoading = true;
+  String? _savedRoute;
 
   @override
   void initState() {
@@ -105,6 +108,10 @@ class _MyAppState extends State<MyApp> {
     // Check authentication state first
     final token = await UserSession.getToken();
     _isAuthenticated = token != null;
+
+    // Check for saved route
+    final prefs = await SharedPreferences.getInstance();
+    _savedRoute = prefs.getString('last_route');
 
     // Pre-load any essential resources here
     await _preloadResources();
@@ -129,20 +136,34 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Determine initial route based on loading, authentication, and saved route
+    String initialRoute;
+    if (_isLoading) {
+      initialRoute = AppRoutes.splash;
+    } else if (_isAuthenticated == true) {
+      // If authenticated and has saved route, use it
+      if (_savedRoute != null &&
+          _savedRoute!.isNotEmpty &&
+          _savedRoute != AppRoutes.landing &&
+          _savedRoute != '/') {
+        initialRoute = _savedRoute!;
+      } else {
+        initialRoute = AppRoutes.main;
+      }
+    } else {
+      initialRoute = AppRoutes.landing;
+    }
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       title: 'World Bank Loan',
       // Reduce theme initialization overhead
       theme: _buildTheme(),
-      // Show splash screen initially, then navigate based on auth state
-      home: _isLoading
-          ? SplashScreen()
-          : _isAuthenticated == true
-              ? MainNavigationScreen()
-              : LandingPage(),
-      // Using a simpler route generation approach
-      onGenerateRoute: _generateRoute,
+      // Use initialRoute instead of home
+      initialRoute: initialRoute,
+      // Use the AppRoutes for route generation
+      onGenerateRoute: AppRoutes.generateRoute,
     );
   }
 
@@ -162,26 +183,4 @@ class _MyAppState extends State<MyApp> {
       ),
     );
   }
-
-  // Simplified route generation that doesn't try to wrap with ResponsiveScreen
-  Route<dynamic> _generateRoute(RouteSettings settings) {
-    // Get the route widget
-    Widget routeWidget;
-
-    switch (settings.name) {
-      // Add your routes here
-      default:
-        routeWidget = const LandingPage();
-        break;
-    }
-
-    // Return a simple material page route
-    return MaterialPageRoute(
-      settings: settings,
-      builder: (context) => routeWidget,
-    );
-  }
-
-  // Define your routes map here
-  static final Map<String, WidgetBuilder> _routes = {};
 }

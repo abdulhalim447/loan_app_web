@@ -455,7 +455,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
 // Download Dialog
 
-void showDownloadDialog(BuildContext context) {
+  void showDownloadDialog(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -563,11 +563,7 @@ void showDownloadDialog(BuildContext context) {
       ),
     );
   }
-
-
-
 }
-
 
 // Restored DownloadProgressDialog class
 class DownloadProgressDialog extends StatefulWidget {
@@ -665,9 +661,6 @@ class _DownloadProgressDialogState extends State<DownloadProgressDialog> {
     );
   }
 }
-
-
-
 
 class ProfileHeader extends StatelessWidget {
   final String number;
